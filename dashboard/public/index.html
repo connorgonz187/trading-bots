@@ -556,8 +556,10 @@
         const a = bot.alpaca;
         if (!a.ok) return { cls: "down", txt: "API DOWN" };
         const tick = bot.health.stockTickAgeMin;
+        // Per-bot, because Bot E ticks every 30 min against the ORB bots' 5.
+        const staleAfter = bot.health.staleAfterMin ?? 12;
         if (clock && clock.isOpen) {
-          if (tick != null && tick < 12) return { cls: "live", txt: "LIVE" };
+          if (tick != null && tick < staleAfter) return { cls: "live", txt: "LIVE" };
           return { cls: "idle", txt: "STALE TICK" };
         }
         return { cls: "idle", txt: "MKT CLOSED" };

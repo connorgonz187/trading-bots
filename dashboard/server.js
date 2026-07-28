@@ -66,8 +66,15 @@ const BOTS = [
       watchlist: "swing-watchlist.csv",
     },
     holdsOvernight: true,
+    // Bot E's task fires every 30 min, not every 5 like the ORB bots, so the
+    // ORB freshness threshold would flag it STALE for most of every half hour.
+    staleAfterMin: 40,
   },
 ];
+
+// Minutes without a tick before a bot is considered stale. The ORB bots run on
+// a 5-minute cycle; 12 is the long-standing default for them.
+const staleAfterFor = (bot) => bot.staleAfterMin ?? 12;
 
 // Default file names (the ORB bots'). Bot E overrides them via `files`.
 const filesFor = (bot) => ({
@@ -482,6 +489,7 @@ function localForBot(bot) {
     health: {
       stockTickAgeMin: stockLog?.ageMin ?? null,
       scanAgeMin: scanLog?.ageMin ?? null,
+      staleAfterMin: staleAfterFor(bot),
     },
     stockToday,
     realized,
