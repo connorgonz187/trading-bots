@@ -165,3 +165,7 @@ Date,Time(ET),Symbol,Side,Action,Qty,Price,Notional,Reason,OrderID
 2026-07-27,15:50,CLF,short,EXIT,112,12.07,,eod-flatten,
 2026-07-27,15:50,INTC,short,EXIT,16,91.69,,eod-flatten,
 2026-07-27,15:55,NOK,short,EXIT,218,9.19,,exit,
+2026-07-28,09:55,SKHY,short,ENTRY,6,129.21,775.26,ORB short stop136.45 tgt114.79,51b79aef-787c-4258-bdd5-67dbf6757289
+2026-07-28,09:55,NOK,short,ENTRY,119,8.67,1032.05,ORB short stop9.05 tgt7.94,1a6575fe-1c15-4adf-a915-1566442bce53
+2026-07-28,09:55,DRAM,short,ENTRY,32,46.71,1494.58,ORB short stop48.39 tgt43.75,a607b832-8fb3-47f4-8c53-236ce2b25bc4
+2026-07-28,09:55,INTC,short,ENTRY,21,85.42,1793.72,ORB short stop87.91 tgt80.90,86b10558-8d61-4f89-aee3-b035f37818f6
