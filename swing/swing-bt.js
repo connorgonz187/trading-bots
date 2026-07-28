@@ -28,7 +28,7 @@ import "dotenv/config";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dailyBarsMulti } from "./alpaca.js";
 import {
-  CFG, WARMUP, entrySignal, exitLevels, ratchetStop, bestSince, sma, atr, indicators,
+  CFG, WARMUP, entrySignal, exitLevels, ratchetStop, bestSince, sma, atr, indicators, regimeOf,
 } from "./swing-strategy.js";
 
 const DAYS = parseInt(process.argv[2] || "730", 10);
@@ -262,10 +262,12 @@ async function main() {
   const spy = bars[REGIME_SYM] || [];
   const regimeByDay = {};
   if (CFG.regime) {
-    const closes = spy.map((b) => b.close);
+    // Call the SAME regimeOf() the live bot calls. This loop used to inline its
+    // own `close >= sma` copy of the rule, which meant any change to the live
+    // filter silently failed to appear in the backtest — the exact divergence
+    // the RSI-on-closed-bars note warns about, one function further down.
     for (let i = CFG.regimeLen; i < spy.length; i++) {
-      const ma = sma(closes.slice(0, i + 1), CFG.regimeLen);
-      regimeByDay[dayKey(spy[i].time)] = closes[i] >= ma ? "bull" : "bear";
+      regimeByDay[dayKey(spy[i].time)] = regimeOf(spy.slice(0, i + 1));
     }
   }
 

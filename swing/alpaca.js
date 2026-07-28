@@ -78,16 +78,63 @@ export const getAsset = (symbol) => api(BASE, `/v2/assets/${symbol}`);
 export const closePosition = (symbol) =>
   api(BASE, `/v2/positions/${symbol}`, { method: "DELETE" });
 
+// ── cross-instance duplicate guard ──────────────────────────────────────────
+// On 2026-07-28 two machines ran the schedule against the same accounts (the
+// desktop had been given the tasks while the laptop's were still enabled). The
+// ORB bots each sent every order twice, ~1s apart, and opened every position at
+// 2x size. Bot E escaped only because it had no signal that day — but its
+// scanner DID run twice (two identical blocks in swing-scan.log), so the next
+// signal would have doubled too. This bot is the one that holds overnight, so a
+// silent 2x here compounds for days rather than being flattened at 15:55.
+//
+// Nothing local can prevent it: the other machine has its own state file and
+// its own log, and OneDrive is last-writer-wins on both. The BROKER is the only
+// shared point of truth, and Alpaca enforces uniqueness on client_order_id
+// (verified: a repeat returns HTTP 422 code 42210000 "client_order_id must be
+// unique"). So derive that id from the trade's IDENTITY — bot, session date,
+// symbol, leg — and the twin's submission is rejected instead of filled.
+export function coid(...parts) {
+  return parts
+    .filter((p) => p != null && p !== "")
+    .join("-")
+    .replace(/[^A-Za-z0-9._-]/g, "")
+    .slice(0, 128);
+}
+
+// True when the broker refused an order because that client_order_id already
+// exists — i.e. this exact trade was already placed, almost certainly by
+// another instance. Harmless to us; loud, because it means a twin IS running.
+export function isDuplicateOrder(e) {
+  if (!e) return false;
+  const code = e.body && e.body.code;
+  if (code === 42210000) return true;
+  return e.status === 422 && /client_order_id must be unique/i.test(e.message || "");
+}
+
+// An order id that is dead at the broker holds no shares and blocks nothing.
+export const ORDER_DEAD = /^(rejected|canceled|cancelled|expired|done_for_day|replaced|suspended)$/i;
+
 // ── orders ──
 export const placeOrder = (body) =>
   api(BASE, "/v2/orders", { method: "POST", body: JSON.stringify(body) });
 export const getOrders = (query = "") => api(BASE, `/v2/orders${query}`);
 export const getOrder = (id) => api(BASE, `/v2/orders/${id}`);
+// Look an order up by the id WE chose, to tell a live twin order apart from our
+// own earlier attempt that the broker rejected (safe to re-send under a new id).
+export const getOrderByClientId = (cid) =>
+  api(BASE, `/v2/orders:by_client_order_id?client_order_id=${encodeURIComponent(cid)}`);
 export const cancelOrder = (id) => api(BASE, `/v2/orders/${id}`, { method: "DELETE" });
 export const cancelAllOrders = () => api(BASE, "/v2/orders", { method: "DELETE" });
 
-export const placeMarket = ({ symbol, qty, side }) =>
-  placeOrder({ symbol, qty: String(qty), side, type: "market", time_in_force: "day" });
+export const placeMarket = ({ symbol, qty, side, clientOrderId }) =>
+  placeOrder({
+    symbol,
+    qty: String(qty),
+    side,
+    type: "market",
+    time_in_force: "day",
+    ...(clientOrderId ? { client_order_id: clientOrderId } : {}),
+  });
 
 /**
  * OCO exit pair over an EXISTING position. One fills, the broker cancels the
@@ -96,7 +143,7 @@ export const placeMarket = ({ symbol, qty, side }) =>
  *
  * `side` is the CLOSING side: "sell" to exit a long, "buy" to cover a short.
  */
-export const placeOco = ({ symbol, qty, side, takeProfit, stopLoss }) =>
+export const placeOco = ({ symbol, qty, side, takeProfit, stopLoss, clientOrderId }) =>
   placeOrder({
     symbol,
     qty: String(qty),
@@ -106,6 +153,7 @@ export const placeOco = ({ symbol, qty, side, takeProfit, stopLoss }) =>
     order_class: "oco",
     take_profit: { limit_price: takeProfit.toFixed(2) },
     stop_loss: { stop_price: stopLoss.toFixed(2) },
+    ...(clientOrderId ? { client_order_id: clientOrderId } : {}),
   });
 
 /** PATCH a resting leg in place (used to raise the stop). */

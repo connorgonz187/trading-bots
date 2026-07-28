@@ -35,10 +35,12 @@ import { readFileSync, existsSync, writeFileSync, appendFileSync } from "fs";
 import {
   getClock, getAccount, getPositions, getAsset, closePosition,
   getOrders, getOrder, cancelOrder, placeMarket, placeOco, replaceOrder,
+  getOrderByClientId, coid, isDuplicateOrder, ORDER_DEAD,
   dailyBarsMulti,
 } from "./alpaca.js";
 import {
-  CFG, WARMUP, entrySignal, exitLevels, ratchetStop, bestSince, regimeOf, indicators, atr, roundCents,
+  CFG, WARMUP, entrySignal, exitLevels, ratchetStop, bestSince, regimeOf, regimeDevPct,
+  indicators, atr, roundCents,
 } from "./swing-strategy.js";
 import { sendSms } from "./notify.js";
 
@@ -289,7 +291,13 @@ async function main() {
   const startISO = new Date(Date.now() - (WARMUP + 60) * 86400e3).toISOString();
   const bars = need.length ? await dailyBarsMulti(need, startISO) : {};
   const regime = regimeOf(bars[REGIME_SYM]);
-  console.log(`  regime ${REGIME_SYM} vs SMA${CFG.regimeLen} -> ${regime || "unknown"}`);
+  const regimeDev = regimeDevPct(bars[REGIME_SYM]);
+  console.log(
+    `  regime ${REGIME_SYM} vs SMA${CFG.regimeLen}` +
+      `${regimeDev == null ? "" : ` (${regimeDev >= 0 ? "+" : ""}${regimeDev.toFixed(2)}%, band ±${(CFG.regimeBandPct * 100).toFixed(2)}%)`}` +
+      ` -> ${regime || "unknown"}` +
+      `${regime === "neutral" ? " (no side vetoed)" : ""}`,
+  );
 
   // ── 2. Manage what is already on: ratchet stops, then time-stop.
   for (const sym of openSyms) {
@@ -438,7 +446,21 @@ async function main() {
 
     try {
       const entrySide = c.sig.side === "long" ? "buy" : "sell";
-      const eo = await placeMarket({ symbol: c.sym, qty, side: entrySide });
+      const entryKey = coid("swing", now.date, c.sym, "entry");
+      const res = await submitGuarded(placeMarket, { symbol: c.sym, qty, side: entrySide }, entryKey);
+      if (res.duplicate) {
+        console.log(
+          `  !! ${c.sym}: entry already placed under "${entryKey}" — ANOTHER INSTANCE is trading this account. Order suppressed (no double position).`,
+        );
+        if (!state.dupAlerted) {
+          state.dupAlerted = true;
+          await sendSms(
+            `PAPER ${TAG} !! DUPLICATE BLOCKED (${c.sym}) — a second copy of this bot is trading this account. Orders are being suppressed; disable one scheduler.`,
+          );
+        }
+        continue;
+      }
+      const eo = res.order;
       const filled = await waitFill(eo.id);
       const fq = Math.floor(Math.abs(+filled.filled_qty)) || qty;
       const entry = +filled.filled_avg_price || px;
@@ -481,16 +503,60 @@ async function main() {
   summarize(state, await getPositions());
 }
 
-/** Place the GTC OCO exit pair. Returns true only if it is actually resting. */
+// Submit an order under an id derived from the trade's IDENTITY rather than a
+// random one, so a second instance of this bot cannot open the same position
+// twice (the full story is in alpaca.js). Returns `{ order }` on success, or
+// `{ duplicate }` when a LIVE order already exists under that id.
+//
+// The lookup is the load-bearing part: a rejected order still burns its
+// client_order_id at the broker, so after a legitimate refusal a plain retry
+// would collide with our OWN corpse and stay blocked. Only a live order means
+// "someone else has this"; a dead one means "retry under the next suffix".
+async function submitGuarded(place, args, key, tries = 3) {
+  for (let n = 0; n < tries; n++) {
+    const clientOrderId = coid(key, n ? `r${n}` : "");
+    try {
+      return { order: await place({ ...args, clientOrderId }) };
+    } catch (err) {
+      if (!isDuplicateOrder(err)) throw err;
+      const existing = await getOrderByClientId(clientOrderId).catch(() => null);
+      if (!existing || !ORDER_DEAD.test(existing.status || "")) {
+        return { duplicate: existing || { client_order_id: clientOrderId } };
+      }
+      console.log(`     id ${clientOrderId} held by our own ${existing.status} order — retrying under a fresh id.`);
+    }
+  }
+  return { duplicate: { client_order_id: coid(key), exhausted: true } };
+}
+
+/**
+ * Place the GTC OCO exit pair. Returns true only if it is actually resting.
+ *
+ * The id carries the STOP price because the breakeven ratchet re-arms this pair
+ * with a raised stop — a fixed id would collide with the previous arming and
+ * the ratchet would silently stop working. Two instances ratcheting to the same
+ * stop still produce the same id, which is exactly the collision we want.
+ */
 async function armOco(sym, e, stop) {
   const side = e.side === "short" ? "buy" : "sell";
+  const px = roundCents(stop);
   try {
-    const o = await placeOco({
-      symbol: sym, qty: e.qty, side,
-      takeProfit: roundCents(e.target), stopLoss: roundCents(stop),
-    });
-    e.ocoId = o.id;
-    e.stop = roundCents(stop);
+    const res = await submitGuarded(
+      placeOco,
+      { symbol: sym, qty: e.qty, side, takeProfit: roundCents(e.target), stopLoss: px },
+      coid("swing", e.entryDate, sym, "oco", px.toFixed(2)),
+    );
+    // A live OCO already resting under this id means the position IS protected,
+    // which is all this function promises. Adopt it rather than reporting failure
+    // and closing a perfectly good entry.
+    if (res.duplicate) {
+      console.log(`     OCO already resting under this id (stop ${px.toFixed(2)}) — adopting it.`);
+      if (res.duplicate.id) e.ocoId = res.duplicate.id;
+      e.stop = px;
+      return Boolean(res.duplicate.id);
+    }
+    e.ocoId = res.order.id;
+    e.stop = px;
     return true;
   } catch (err) {
     console.log(`     OCO placement failed: ${err.message}`);

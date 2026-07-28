@@ -14,7 +14,10 @@
  *                      override with a fixed ORB_TRAIL_PRICE.
  *
  * RISK CONTROLS (all env-tunable, on by default):
- *   ORB_REGIME=true       only take longs when SPY≥VWAP, shorts when SPY≤VWAP.
+ *   ORB_REGIME=true       veto longs when SPY is decisively below VWAP and
+ *                         shorts when decisively above. "Decisively" = outside
+ *                         ORB_REGIME_BAND_PCT; inside it the tape is called
+ *                         neutral and neither side is vetoed.
  *   ORB_MAX_POSITIONS     cap concurrent open positions (default 4).
  *   ORB_MAX_PER_SECTOR    cap positions in one correlated cluster (default 2).
  *   ORB_MAX_DAILY_LOSS    halt new entries once realized P/L ≤ −this (default 150).
@@ -72,6 +75,10 @@ import {
   placeTrailingStop,
   recentBars,
   getAsset,
+  getOrderByClientId,
+  coid,
+  isDuplicateOrder,
+  ORDER_DEAD,
 } from "./alpaca.js";
 import { sessionVWAP } from "./strategy.js";
 import { sendSms } from "./notify.js";
@@ -92,6 +99,39 @@ const LONGS = !/^(0|false|no|off)$/i.test(process.env.ORB_LONGS || "true"); // d
 // ── Risk controls (on by default; tune or disable via env) ──
 const REGIME = !/^(0|false|no|off)$/i.test(process.env.ORB_REGIME || "true");
 const REGIME_SYM = process.env.ORB_REGIME_SYMBOL || "SPY";
+// Half-width of the NEUTRAL zone around VWAP, in percent of price. Inside it
+// the call is "neutral": neither side is vetoed and the opening-range break
+// itself picks the trade.
+//
+// DEFAULT 0 = OFF, i.e. the original bare sign test, and that default is
+// deliberate — read this before changing it.
+//
+// The filter is a coin flip whenever SPY sits on its VWAP, and "on its VWAP" is
+// where SPY spends much of a session. Measured over the 841 regime readings in
+// this log (34 sessions, 2026-06-08..07-28):
+//
+//   call split      bull 53% / bear 47%
+//   |dev| from VWAP p25 0.078%   p50 0.160%   p75 0.288%   p90 0.461%
+//
+// Half of all directional calls are made on less than 16 BASIS POINTS of
+// deviation, on a 15-min-delayed IEX feed that sees a fraction of the tape.
+// That is noise deciding direction, and it is not cosmetic: the filter vetoed
+// 277 opening-range breaks over those 34 sessions (99 longs on a bear call,
+// 178 shorts on a bull call).
+//
+// So why is it off? Because "the input is noisy" is not evidence that removing
+// it helps, and there is no ORB backtest to settle it — backtest/strategies/
+// orb.js is single-symbol, long-only and has no regime filter at all. What we
+// do have says the redirection has nowhere good to go: over the same sessions
+// BOTH economic sleeves lose (bullish bets PF 0.82, bearish PF 0.85). And it
+// did NOT cause the 2026-07-28 losses — zero vetoes fired on either account
+// that day; the damage there was the duplicate-order bug, and Bot C's all-short
+// day is its ORB_LONGS=false config, not a regime call.
+//
+// Turning this on at 0.15 would reclassify 47% of readings as neutral. That is
+// a large, unvalidated change to a live account, so it is a knob to TEST, not a
+// default to assume. Suggested values: 0.10 (31% neutral) or 0.15 (47%).
+const REGIME_BAND = Math.abs(parseFloat(process.env.ORB_REGIME_BAND_PCT ?? "0") || 0) / 100;
 const MAX_POSITIONS = parseInt(process.env.ORB_MAX_POSITIONS || "4", 10);
 const MAX_PER_SECTOR = parseInt(process.env.ORB_MAX_PER_SECTOR || "2", 10);
 const MAX_DAILY_LOSS = parseFloat(process.env.ORB_MAX_DAILY_LOSS || "150");
@@ -413,8 +453,25 @@ async function main() {
       const spy = await sharedBars(REGIME_SYM, "5Min", startISO, bucketKey);
       const vwap = sessionVWAP(spy);
       const px = spy.length ? spy[spy.length - 1].close : null;
-      if (vwap && px) regime = px >= vwap ? "bull" : "bear";
-      console.log(`  regime ${REGIME_SYM} ${px ? px.toFixed(2) : "?"} vs VWAP ${vwap ? vwap.toFixed(2) : "?"} -> ${regime || "unknown"}`);
+      let devPct = null;
+      if (vwap && px) {
+        const dev = (px - vwap) / vwap;
+        devPct = dev * 100;
+        // Only a decisive excursion vetoes a side; a hairline is noise. The
+        // `> 0` guard makes a band of 0 EXACTLY the old sign test, including
+        // the px == vwap tie, so the shipped default changes nothing.
+        regime =
+          REGIME_BAND > 0 && Math.abs(dev) <= REGIME_BAND
+            ? "neutral"
+            : dev >= 0
+              ? "bull"
+              : "bear";
+      }
+      console.log(
+        `  regime ${REGIME_SYM} ${px ? px.toFixed(2) : "?"} vs VWAP ${vwap ? vwap.toFixed(2) : "?"}` +
+          `${devPct == null ? "" : ` (${devPct >= 0 ? "+" : ""}${devPct.toFixed(2)}%, band ±${(REGIME_BAND * 100).toFixed(2)}%)`}` +
+          ` -> ${regime || "unknown"}`,
+      );
     } catch (e) {
       console.log(`  regime check failed (${e.message}) — not filtering`);
     }
@@ -541,7 +598,13 @@ async function main() {
         // distance scales with ATR and has a price-% floor (no penny trails).
         const entrySide = side === "long" ? "buy" : "sell";
         const exitSide = side === "long" ? "sell" : "buy";
-        const eo = await placeMarket({ symbol: sym, qty, side: entrySide });
+        const entryKey = coid("orb", now.date, sym, "entry");
+        const res = await submitGuarded(placeMarket, { symbol: sym, qty, side: entrySide }, entryKey);
+        if (res.duplicate) {
+          await noteDuplicate(state, sym, entryKey);
+          continue;
+        }
+        const eo = res.order;
         const filled = await waitFill(eo.id);
         const fqty = Math.floor(Math.abs(+filled.filled_qty)) || qty;
         entry = +filled.filled_avg_price || price;
@@ -551,13 +614,28 @@ async function main() {
           atrVal ? TRAIL_ATR_MULT * atrVal : riskPerShare,
           TRAIL_MIN_PCT * entry,
         );
-        await placeTrailingStop({ symbol: sym, qty, side: exitSide, trailPrice: trail });
+        // Guarded too: on 2026-07-28 the twin instances each armed their own
+        // trailing stop 21ms apart, so a single exit fired two stop orders.
+        const trailRes = await submitGuarded(
+          placeTrailingStop,
+          { symbol: sym, qty, side: exitSide, trailPrice: trail },
+          coid("orb", now.date, sym, "trail"),
+        );
+        if (trailRes.duplicate) {
+          console.log(`  ${sym}: trailing stop already armed under this id — leaving the existing one in place.`);
+        }
         state.entered[sym] = { side, qty, entry, stop, risk: dollarRisk, trail: true, exitedQty: 0 };
         tgtStr = `trail${trail.toFixed(2)}`;
       } else {
         target = side === "long" ? entry + R * riskPerShare : entry - R * riskPerShare;
         const place = side === "long" ? placeBracketBuy : placeBracketSell;
-        const order = await place({ symbol: sym, qty, takeProfit: target, stopLoss: stop });
+        const entryKey = coid("orb", now.date, sym, "entry");
+        const res = await submitGuarded(place, { symbol: sym, qty, takeProfit: target, stopLoss: stop }, entryKey);
+        if (res.duplicate) {
+          await noteDuplicate(state, sym, entryKey);
+          continue;
+        }
+        const order = res.order;
         orderId = order.id;
         // Record the ACTUAL fill, not the signal price — P/L is computed from
         // state.entered.entry, and on a thin feed the two can differ enough to
@@ -640,6 +718,16 @@ async function flattenAll(positions, state, now, reason) {
       console.log(`  ${reason} ${p.symbol} ${qty}sh @ ${exitPx.toFixed(2)} P/L $${pnl.toFixed(2)} | day $${state.realizedPnl.toFixed(2)}`);
       await sendSms(`PAPER ${TAG} EXIT ${p.symbol} ${reason} @ $${exitPx.toFixed(2)} P/L $${pnl.toFixed(2)}`);
     } catch (err) {
+      // "position not found" is the one failure that is actually a success:
+      // the position is gone, which is the whole point of flattening. It shows
+      // up when something else closed it first — a resting bracket leg, or (on
+      // 2026-07-28) the twin instance racing us. Reporting that as
+      // "FLATTEN FAILED" cried wolf on an account that was already flat.
+      if (/position not found|40410000|\b404\b/i.test(err.message || "")) {
+        console.log(`  ${reason} ${p.symbol}: already closed by another exit — nothing to flatten.`);
+        state.exited[p.symbol] = true;
+        continue;
+      }
       console.log(`  ${reason} ${p.symbol} failed: ${err.message}`);
       stuck.push(p.symbol);
     }
@@ -670,6 +758,48 @@ async function waitOrdersCleared(tries = 10, ms = 500) {
     await new Promise((r) => setTimeout(r, ms));
   }
   return false;
+}
+
+// Submit an order under an id derived from the trade's IDENTITY rather than a
+// random one, so a second instance of this bot cannot open the same position a
+// second time (the full story is in alpaca.js). Returns `{ order }` on success,
+// or `{ duplicate }` when a LIVE order already exists under that id — which
+// means a twin placed it and we must not place our own.
+//
+// The lookup is the load-bearing part. A rejected order still burns its
+// client_order_id at the broker, so after a legitimate refusal (no buying
+// power, a transient 422) a plain retry would collide with our OWN corpse and
+// stay blocked for the rest of the day. Only a live order means "someone else
+// has this"; a dead one means "try again under the next suffix".
+async function submitGuarded(place, args, key, tries = 3) {
+  for (let n = 0; n < tries; n++) {
+    const clientOrderId = coid(key, n ? `r${n}` : "");
+    try {
+      return { order: await place({ ...args, clientOrderId }) };
+    } catch (e) {
+      if (!isDuplicateOrder(e)) throw e;
+      const existing = await getOrderByClientId(clientOrderId).catch(() => null);
+      if (!existing || !ORDER_DEAD.test(existing.status || "")) {
+        return { duplicate: existing || { client_order_id: clientOrderId } };
+      }
+      console.log(`  ${args.symbol}: id ${clientOrderId} held by our own ${existing.status} order — retrying under a fresh id.`);
+    }
+  }
+  return { duplicate: { client_order_id: coid(key), exhausted: true } };
+}
+
+// One loud line per occurrence, one alert per day. If this fires at all, two
+// bots are pointed at the same account and the other one needs to be stopped.
+async function noteDuplicate(state, sym, key, what = "entry") {
+  console.log(
+    `  !! ${sym}: ${what} already placed under "${key}" — ANOTHER INSTANCE is trading this account. Order suppressed (no double position).`,
+  );
+  if (!state.dupAlerted) {
+    state.dupAlerted = true;
+    await sendSms(
+      `PAPER ${TAG} !! DUPLICATE BLOCKED (${sym}) — a second copy of this bot is trading this account. Orders are being suppressed; disable one scheduler.`,
+    );
+  }
 }
 
 // Close a position, tolerating the held_for_orders race: if the broker still
