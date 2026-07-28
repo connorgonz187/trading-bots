@@ -590,12 +590,22 @@
         return `<table><thead><tr><th>Sym</th><th></th><th>Qty</th><th>Price</th><th>Reason</th></tr></thead><tbody>${body}</tbody></table>`;
       }
 
+      // The two scanners record different things. The ORB scan writes PctChange
+      // (it hunts movers); the swing scan writes ATR% + Trend (it hunts calm
+      // names where a 2% stop clears the noise). Rendering PctChange blindly
+      // printed a bare "%" on every Bot E chip.
       function watchlistChips(wl) {
         if (!wl.length) return '<div class="empty">No watchlist scanned</div>';
         return '<div class="chips">' + wl.map((w) => {
-          const pc = Number(w.PctChange);
-          const c = pc > 0 ? "pos" : pc < 0 ? "neg" : "muted";
-          return `<span class="chip"><span class="sym">${esc(w.Symbol)}</span> <span class="pct ${c}">${pc > 0 ? "+" : ""}${esc(w.PctChange)}%</span></span>`;
+          if (w.PctChange !== undefined && w.PctChange !== "") {
+            const pc = Number(w.PctChange);
+            const c = pc > 0 ? "pos" : pc < 0 ? "neg" : "muted";
+            return `<span class="chip"><span class="sym">${esc(w.Symbol)}</span> <span class="pct ${c}">${pc > 0 ? "+" : ""}${esc(w.PctChange)}%</span></span>`;
+          }
+          const atr = Number(w["ATR%"]);
+          const c = w.Trend === "up" ? "pos" : w.Trend === "down" ? "neg" : "muted";
+          const label = Number.isFinite(atr) ? `${atr.toFixed(2)}% ATR` : "—";
+          return `<span class="chip"><span class="sym">${esc(w.Symbol)}</span> <span class="pct ${c}">${label}</span></span>`;
         }).join("") + "</div>";
       }
 
