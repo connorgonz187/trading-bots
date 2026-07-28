@@ -1,0 +1,16 @@
+{
+  "name": "trading-bot",
+  "version": "1.0.0",
+  "description": "Paper-trading stock ORB bot on Alpaca (runtime-only clone; crypto + backtesting toolkit live in bot a)",
+  "type": "module",
+  "main": "stockbot.js",
+  "scripts": {
+    "start": "node stockbot.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

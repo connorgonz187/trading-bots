@@ -1,0 +1,740 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tradex</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        /* Apple system palette on deep space */
+        --bg: #05060c;
+        --ink: rgba(255, 255, 255, 0.92);
+        --ink-dim: rgba(255, 255, 255, 0.52);
+        --ink-faint: rgba(255, 255, 255, 0.32);
+        --green: #30d158;
+        --red: #ff453a;
+        --amber: #ff9f0a;
+        --blue: #0a84ff;
+        --teal: #64d2ff;
+        --purple: #bf5af2;
+        --pink: #ff375f;
+        /* glass material */
+        --glass: linear-gradient(135deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.035));
+        --glass-strong: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
+        --edge: rgba(255, 255, 255, 0.14);
+        --hairline: rgba(255, 255, 255, 0.08);
+        --specular: inset 0 1px 0 rgba(255, 255, 255, 0.25), inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+        --depth: 0 24px 60px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+        --sans: "Geist", -apple-system, "SF Pro Display", "Segoe UI Variable", sans-serif;
+        --spring: cubic-bezier(0.32, 1.4, 0.45, 1);
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        color: var(--ink);
+        font-family: var(--sans);
+        font-size: 14px;
+        line-height: 1.5;
+        background: radial-gradient(140% 110% at 50% 0%, #0d1124 0%, #070a18 45%, var(--bg) 100%);
+        background-attachment: fixed;
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+      }
+
+      /* ── aurora wallpaper the glass refracts ── */
+      .aurora {
+        position: fixed;
+        inset: -20%;
+        z-index: -1;
+        filter: blur(90px) saturate(140%);
+        pointer-events: none;
+      }
+      .aurora i {
+        position: absolute;
+        border-radius: 50%;
+        opacity: 0.75;
+        will-change: transform;
+      }
+      .aurora .b1 { width: 55vw; height: 55vw; left: -8%; top: -12%; background: radial-gradient(circle, #2e3bd4, transparent 65%); animation: drift1 38s ease-in-out infinite alternate; }
+      .aurora .b2 { width: 48vw; height: 48vw; right: -10%; top: 4%; background: radial-gradient(circle, #6b2bd9, transparent 65%); animation: drift2 46s ease-in-out infinite alternate; }
+      .aurora .b3 { width: 42vw; height: 42vw; left: 22%; bottom: -16%; background: radial-gradient(circle, #0a5fa8, transparent 65%); animation: drift3 52s ease-in-out infinite alternate; }
+      .aurora .b4 { width: 30vw; height: 30vw; right: 16%; bottom: 2%; background: radial-gradient(circle, #b32457, transparent 65%); animation: drift1 60s ease-in-out infinite alternate-reverse; }
+      .aurora .b5 { width: 24vw; height: 24vw; left: 42%; top: 16%; background: radial-gradient(circle, #0e9aa7, transparent 65%); animation: drift2 70s ease-in-out infinite alternate-reverse; }
+      @keyframes drift1 { from { transform: translate(0, 0) scale(1); } to { transform: translate(9vw, 7vh) scale(1.18); } }
+      @keyframes drift2 { from { transform: translate(0, 0) scale(1.1); } to { transform: translate(-8vw, 9vh) scale(0.94); } }
+      @keyframes drift3 { from { transform: translate(0, 0) scale(0.95); } to { transform: translate(7vw, -8vh) scale(1.15); } }
+
+      /* one-time diagonal light pass over the glass */
+      .sweep {
+        position: fixed;
+        top: -30%;
+        left: -60%;
+        width: 45%;
+        height: 160%;
+        z-index: 9996;
+        pointer-events: none;
+        transform: rotate(16deg);
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.09) 45%, rgba(255, 255, 255, 0.16) 50%, rgba(255, 255, 255, 0.09) 55%, transparent);
+        animation: sweep 1.8s cubic-bezier(0.4, 0, 0.2, 1) 0.35s forwards;
+      }
+      @keyframes sweep {
+        from { transform: translateX(0) rotate(16deg); }
+        to { transform: translateX(420%) rotate(16deg); opacity: 0; }
+      }
+
+      .lbl {
+        font-size: 10.5px;
+        font-weight: 600;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+        color: var(--ink-dim);
+      }
+      a { color: var(--teal); }
+
+      /* ── floating glass header ── */
+      header {
+        display: flex;
+        align-items: center;
+        gap: 28px;
+        flex-wrap: wrap;
+        margin: 14px 16px 4px;
+        padding: 14px 22px;
+        position: sticky;
+        top: 12px;
+        z-index: 50;
+        border-radius: 28px;
+        background: var(--glass-strong);
+        backdrop-filter: blur(28px) saturate(180%);
+        -webkit-backdrop-filter: blur(28px) saturate(180%);
+        border: 1px solid var(--edge);
+        box-shadow: var(--depth), var(--specular);
+      }
+      .brand { display: flex; align-items: center; gap: 13px; }
+      .orb {
+        width: 38px; height: 38px;
+        border-radius: 50%;
+        background:
+          radial-gradient(circle at 30% 26%, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0) 36%),
+          radial-gradient(circle at 68% 75%, rgba(100, 210, 255, 0.7), transparent 55%),
+          linear-gradient(135deg, #0a84ff, #bf5af2 70%, #ff375f);
+        box-shadow:
+          inset 0 1px 1px rgba(255, 255, 255, 0.6),
+          inset 0 -4px 8px rgba(0, 0, 0, 0.25),
+          0 6px 18px rgba(10, 132, 255, 0.45);
+        animation: orbFloat 7s ease-in-out infinite;
+      }
+      @keyframes orbFloat {
+        0%, 100% { transform: translateY(0) scale(1); }
+        50% { transform: translateY(-3px) scale(1.03); }
+      }
+      .wordmark {
+        font-weight: 700;
+        font-size: 21px;
+        letter-spacing: -0.3px;
+        background: linear-gradient(180deg, #fff, rgba(255, 255, 255, 0.72));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .subword {
+        font-size: 10.5px;
+        font-weight: 500;
+        letter-spacing: 0.4px;
+        color: var(--ink-dim);
+        margin-top: -2px;
+      }
+
+      .readouts { display: flex; gap: 28px; align-items: center; flex-wrap: wrap; }
+      .readout { display: flex; flex-direction: column; gap: 2px; }
+      .readout .val {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--ink);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.2px;
+        padding: 0 2px;
+        border-radius: 8px;
+      }
+      .readout .val.big {
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: -0.6px;
+        background: linear-gradient(180deg, #fff, rgba(255, 255, 255, 0.78));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      #combChart { width: 150px; height: 38px; }
+
+      .spacer { flex: 1; }
+      .right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; min-width: 0; }
+      .clock {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        padding: 8px 15px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--edge);
+        box-shadow: var(--specular);
+        color: var(--ink-dim);
+        white-space: nowrap;
+      }
+      .clock.open {
+        color: #d7ffe2;
+        border-color: rgba(48, 209, 88, 0.5);
+        background: linear-gradient(135deg, rgba(48, 209, 88, 0.28), rgba(48, 209, 88, 0.1));
+        text-shadow: 0 0 12px rgba(48, 209, 88, 0.6);
+      }
+      .sysline {
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        color: var(--ink-dim);
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+      }
+      .btn {
+        font-family: var(--sans);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.4px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid var(--edge);
+        box-shadow: var(--specular);
+        color: var(--ink);
+        border-radius: 999px;
+        padding: 8px 15px;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.25s var(--spring);
+      }
+      .btn:hover {
+        background: rgba(255, 255, 255, 0.16);
+        transform: translateY(-1px);
+        box-shadow: var(--specular), 0 6px 18px rgba(0, 0, 0, 0.35);
+      }
+      .btn:active { transform: scale(0.97); }
+
+      /* ── grid + glass cards ── */
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(370px, 1fr));
+        gap: 18px;
+        padding: 18px 16px;
+        max-width: 1700px;
+        margin: 0 auto;
+      }
+      .card {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        border-radius: 30px;
+        background: var(--glass);
+        backdrop-filter: blur(26px) saturate(180%);
+        -webkit-backdrop-filter: blur(26px) saturate(180%);
+        border: 1px solid var(--edge);
+        box-shadow: var(--depth), var(--specular);
+        overflow: hidden;
+        transition: transform 0.4s var(--spring), box-shadow 0.4s var(--spring), border-color 0.3s;
+      }
+      .card:hover {
+        transform: translateY(-4px);
+        border-color: rgba(255, 255, 255, 0.24);
+        box-shadow: 0 32px 80px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.3), var(--specular);
+      }
+      /* corner gleam — the light source the glass catches */
+      .card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        border-radius: inherit;
+        background: radial-gradient(120% 60% at 12% 0%, rgba(255, 255, 255, 0.14), transparent 45%);
+      }
+      .boot {
+        opacity: 0;
+        animation: boot 0.85s var(--spring) forwards;
+        animation-delay: calc(var(--i) * 110ms + 280ms);
+      }
+      @keyframes boot {
+        from { opacity: 0; transform: translateY(26px) scale(0.94); filter: blur(10px); }
+        to { opacity: 1; transform: none; filter: none; }
+      }
+
+      .card-head {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 18px 20px 14px;
+      }
+      .card-head .id {
+        font-weight: 700;
+        font-size: 17px;
+        letter-spacing: -0.2px;
+        background: linear-gradient(180deg, #fff, rgba(255, 255, 255, 0.75));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .card-head .flavor {
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.2px;
+        color: var(--ink-dim);
+        margin-top: 2px;
+      }
+      .card-head .acct { font-size: 10.5px; color: var(--ink-faint); margin-top: 2px; font-variant-numeric: tabular-nums; }
+      .pill {
+        margin-left: auto;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.7px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--edge);
+        box-shadow: var(--specular);
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        backdrop-filter: blur(8px);
+      }
+      .led { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; }
+      .pill.live { color: #d7ffe2; border-color: rgba(48, 209, 88, 0.45); background: linear-gradient(135deg, rgba(48, 209, 88, 0.3), rgba(48, 209, 88, 0.08)); }
+      .pill.live .led { background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 1.8s ease-in-out infinite; }
+      .pill.idle { color: #ffe7c2; border-color: rgba(255, 159, 10, 0.4); background: linear-gradient(135deg, rgba(255, 159, 10, 0.26), rgba(255, 159, 10, 0.07)); }
+      .pill.idle .led { background: var(--amber); box-shadow: 0 0 6px rgba(255, 159, 10, 0.7); }
+      .pill.down { color: #ffd2cd; border-color: rgba(255, 69, 58, 0.45); background: linear-gradient(135deg, rgba(255, 69, 58, 0.3), rgba(255, 69, 58, 0.08)); }
+      .pill.down .led { background: var(--red); box-shadow: 0 0 8px var(--red); }
+      @keyframes pulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(48, 209, 88, 0.55); }
+        50% { box-shadow: 0 0 0 6px rgba(48, 209, 88, 0); }
+      }
+
+      .row3 {
+        display: flex;
+        gap: 24px;
+        padding: 14px 20px;
+        margin: 0 14px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      }
+      .row3 .readout .val { font-size: 16px; }
+
+      section.block { padding: 14px 20px 15px; }
+      section.block + section.block, .row3 + section.block { border-top: 1px solid var(--hairline); margin-top: 12px; }
+      .block > .lbl { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+      .count {
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--ink);
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 999px;
+        padding: 1px 8px;
+        letter-spacing: 0;
+        font-variant-numeric: tabular-nums;
+      }
+      .meta { margin-left: auto; font-size: 10px; font-weight: 500; letter-spacing: 0.2px; color: var(--ink-faint); text-transform: none; font-variant-numeric: tabular-nums; }
+
+      table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+      th {
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        color: var(--ink-faint);
+        text-align: right;
+        padding: 4px 7px 7px;
+        border-bottom: 1px solid var(--hairline);
+      }
+      td { text-align: right; padding: 7px 7px; font-size: 12.5px; color: var(--ink); }
+      td:first-child, th:first-child { text-align: left; }
+      tbody tr + tr td { border-top: 1px solid rgba(255, 255, 255, 0.05); }
+      tbody tr { transition: background 0.2s; }
+      tbody tr:hover { background: rgba(255, 255, 255, 0.04); }
+      .sym { font-weight: 600; color: var(--ink); letter-spacing: 0.2px; }
+      .tag {
+        font-size: 9.5px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        padding: 2.5px 8px;
+        border-radius: 999px;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      }
+      .tag.long, .tag.buy, .tag.ENTRY { background: rgba(48, 209, 88, 0.2); color: #6ee79a; }
+      .tag.short, .tag.sell, .tag.EXIT { background: rgba(255, 69, 58, 0.2); color: #ff8d84; }
+      .pos { color: #4cd964; }
+      .neg { color: #ff6b61; }
+      .muted { color: var(--ink-dim); }
+      .empty { color: var(--ink-faint); font-size: 12px; padding: 3px 0; letter-spacing: 0.1px; }
+
+      .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+      .chip {
+        font-size: 11.5px;
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
+        padding: 5px 11px;
+        letter-spacing: 0.1px;
+        font-variant-numeric: tabular-nums;
+        transition: all 0.25s var(--spring);
+      }
+      .chip:hover { background: rgba(255, 255, 255, 0.13); transform: translateY(-1px); }
+      .chip .pct { font-weight: 600; }
+
+      .panel-box {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        border-radius: 16px;
+        padding: 10px 13px;
+        font-size: 12.5px;
+      }
+      .err { color: #ff8d84; font-size: 12px; letter-spacing: 0.1px; }
+
+      /* tick flash (uptick / downtick) */
+      .tick-up { animation: tickUp 1s ease-out; }
+      .tick-down { animation: tickDown 1s ease-out; }
+      @keyframes tickUp {
+        0% { background: rgba(48, 209, 88, 0.32); box-shadow: 0 0 16px rgba(48, 209, 88, 0.35); }
+        100% { background: transparent; box-shadow: none; }
+      }
+      @keyframes tickDown {
+        0% { background: rgba(255, 69, 58, 0.32); box-shadow: 0 0 16px rgba(255, 69, 58, 0.35); }
+        100% { background: transparent; box-shadow: none; }
+      }
+
+      #banner {
+        display: none;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        background: linear-gradient(135deg, rgba(255, 69, 58, 0.3), rgba(255, 69, 58, 0.12));
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 69, 58, 0.4);
+        border-radius: 999px;
+        color: #ffd2cd;
+        text-align: center;
+        padding: 9px 16px;
+        margin: 12px 16px 0;
+        box-shadow: var(--specular);
+      }
+      footer {
+        text-align: center;
+        font-size: 10.5px;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        color: var(--ink-faint);
+        padding: 14px 16px 22px;
+      }
+      svg.spark { width: 100%; display: block; }
+
+      @media (prefers-reduced-motion: reduce) {
+        .aurora i, .orb, .sweep { animation: none !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="aurora" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i><i class="b5"></i></div>
+    <div class="sweep"></div>
+    <div id="banner"></div>
+
+    <header>
+      <div class="brand">
+        <div class="orb"></div>
+        <div>
+          <div class="wordmark">Tradex</div>
+          <div class="subword">Algorithmic trading desk</div>
+        </div>
+      </div>
+
+      <div class="readouts">
+        <div class="readout">
+          <span class="lbl">Aggregate Equity</span>
+          <span class="val big" id="combEquity">——</span>
+        </div>
+        <div class="readout">
+          <span class="lbl">Session P&amp;L</span>
+          <span class="val" id="combPL">——</span>
+        </div>
+        <div class="readout">
+          <span class="lbl">Open Positions</span>
+          <span class="val" id="combPos">——</span>
+        </div>
+        <div class="readout">
+          <span class="lbl">Aggregate · 30D</span>
+          <div id="combChart"></div>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+      <div class="right">
+        <span class="clock" id="clock">MARKET ——</span>
+        <span class="sysline" id="sysline">SYS</span>
+        <button class="btn" id="fsBtn">⛶ Fullscreen</button>
+      </div>
+    </header>
+
+    <div class="grid" id="grid"></div>
+    <footer>Read-only paper-trading monitor · refresh 10s · local files + Alpaca paper API</footer>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const fmtUsd = (n, d = 2) =>
+        n == null ? "——" : "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+      const signUsd = (n) => {
+        if (n == null) return "——";
+        return (n >= 0 ? "+" : "−") + "$" + Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      };
+      const cls = (n) => (n == null ? "" : n > 0 ? "pos" : n < 0 ? "neg" : "muted");
+      const esc = (s) => String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+
+      // luminous glass sparkline
+      function sparkline(history, w = 280, h = 50) {
+        if (!history || history.length < 2)
+          return '<div class="empty">Awaiting equity history</div>';
+        const ys = history.map((p) => p.equity);
+        const min = Math.min(...ys), max = Math.max(...ys);
+        const span = max - min || 1;
+        const n = history.length;
+        const x = (i) => (i / (n - 1)) * (w - 4) + 2;
+        const y = (v) => h - 3 - ((v - min) / span) * (h - 8);
+        const pts = history.map((p, i) => `${x(i).toFixed(1)},${y(p.equity).toFixed(1)}`);
+        const up = ys[n - 1] >= ys[0];
+        const color = up ? "var(--green)" : "var(--red)";
+        const gid = "g" + Math.floor((min * 1000 + n) % 99999);
+        const lx = x(n - 1).toFixed(1), ly = y(ys[n - 1]).toFixed(1);
+        return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="height:${h}px;filter:drop-shadow(0 0 4px ${color})">
+          <defs><linearGradient id="${gid}" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stop-color="${color}" stop-opacity="0.25"/>
+            <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+          </linearGradient></defs>
+          <polygon points="2,${h} ${pts.join(" ")} ${w - 2},${h}" fill="url(#${gid})"/>
+          <polyline points="${pts.join(" ")}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+          <circle cx="${lx}" cy="${ly}" r="2.6" fill="${color}"/>
+        </svg>`;
+      }
+
+      function statsBlock(bot) {
+        const r = bot.realized, a = bot.alpaca;
+        if (!r || r.count === 0) return '<div class="empty">No closed round-trips yet</div>';
+        // "Net" is broker equity minus starting capital — exact, and immune to any
+        // trade-log gap. "Realized" is reconstructed from stock-trades.csv, so it
+        // can drift when an entry never logged its exit; `open` counts those.
+        const drift = bot.netSinceStart != null ? r.pnl - bot.netSinceStart : null;
+        const warn = r.open > 0
+          ? `<span class="muted" style="font-size:11px" title="Entries with no matching exit in the trade log — usually a flatten that didn't confirm. Trust 'Net'.">· ${r.open} unpaired</span>`
+          : "";
+        return `<div class="row3" style="background:none;border:none;box-shadow:none;padding:0;margin:0;gap:26px">
+          <div class="readout"><span class="lbl">Net (broker)</span><span class="val ${cls(bot.netSinceStart)}">${signUsd(bot.netSinceStart)}</span></div>
+          <div class="readout"><span class="lbl">Realized (log)</span><span class="val ${cls(r.pnl)}">${signUsd(r.pnl)}</span> ${warn}</div>
+          <div class="readout"><span class="lbl">Win Rate</span><span class="val">${r.winRate.toFixed(0)}% <span class="muted" style="font-size:11px">${r.wins}/${r.count}</span></span></div>
+        </div>`;
+      }
+
+      function ageLabel(min) {
+        if (min == null) return "no log";
+        if (min < 1) return "now";
+        if (min < 90) return Math.round(min) + "m";
+        if (min < 60 * 36) return Math.round(min / 60) + "h";
+        return Math.round(min / 1440) + "d";
+      }
+
+      function healthPill(bot, clock) {
+        const a = bot.alpaca;
+        if (!a.ok) return { cls: "down", txt: "API DOWN" };
+        const tick = bot.health.stockTickAgeMin;
+        if (clock && clock.isOpen) {
+          if (tick != null && tick < 12) return { cls: "live", txt: "LIVE" };
+          return { cls: "idle", txt: "STALE TICK" };
+        }
+        return { cls: "idle", txt: "MKT CLOSED" };
+      }
+
+      function positionsTable(positions) {
+        if (!positions.length) return '<div class="empty">No open positions</div>';
+        const rows = positions.map((p) => `<tr>
+            <td><span class="sym">${esc(p.symbol)}</span> <span class="tag ${p.side}">${esc(p.side)}</span></td>
+            <td>${p.qty}</td>
+            <td>${fmtUsd(p.avgEntry)}</td>
+            <td>${fmtUsd(p.current)}</td>
+            <td class="${cls(p.unrealizedPL)}">${signUsd(p.unrealizedPL)}<br><span style="font-size:9.5px">${p.unrealizedPLpct >= 0 ? "+" : ""}${p.unrealizedPLpct?.toFixed(2)}%</span></td>
+          </tr>`).join("");
+        return `<table><thead><tr><th>Symbol</th><th>Qty</th><th>Entry</th><th>Mark</th><th>Unreal</th></tr></thead><tbody>${rows}</tbody></table>`;
+      }
+
+      function tradesTable(rows) {
+        if (!rows.length) return '<div class="empty">No trades today</div>';
+        const body = rows.map((r) => {
+          const action = r.Action || "";
+          return `<tr>
+            <td><span class="sym">${esc(r.Symbol)}</span></td>
+            <td><span class="tag ${esc(action)}">${esc(action)}</span></td>
+            <td>${esc(r.Qty)}</td>
+            <td>${fmtUsd(r.Price)}</td>
+            <td class="muted">${esc(r.Reason || "")}</td>
+          </tr>`;
+        }).join("");
+        return `<table><thead><tr><th>Sym</th><th></th><th>Qty</th><th>Price</th><th>Reason</th></tr></thead><tbody>${body}</tbody></table>`;
+      }
+
+      function watchlistChips(wl) {
+        if (!wl.length) return '<div class="empty">No watchlist scanned</div>';
+        return '<div class="chips">' + wl.map((w) => {
+          const pc = Number(w.PctChange);
+          const c = pc > 0 ? "pos" : pc < 0 ? "neg" : "muted";
+          return `<span class="chip"><span class="sym">${esc(w.Symbol)}</span> <span class="pct ${c}">${pc > 0 ? "+" : ""}${esc(w.PctChange)}%</span></span>`;
+        }).join("") + "</div>";
+      }
+
+      function cryptoBlock(bot) {
+        const c = bot.crypto;
+        const pos = c.position && c.position.open ? c.position : null;
+        const d = c.lastDecision;
+        const posHtml = pos
+          ? `<div class="panel-box">OPEN ${esc(pos.symbol || "BTC")} · entry ${fmtUsd(pos.entry)} · size ${esc(pos.size ?? "")}</div>`
+          : '<div class="empty">Flat — no open crypto position</div>';
+        const decHtml = d
+          ? `<div class="panel-box" style="margin-top:8px">
+              <b style="color:var(--ink)">${esc(d.symbol)}</b> · ${esc(d.strategy || "")}<br>
+              <span class="muted">${new Date(d.timestamp).toLocaleString()}</span> ·
+              ${d.orderPlaced ? '<span class="pos">ORDER PLACED</span>' : '<span class="muted">' + esc(d.blockedReason || "no signal") + "</span>"}
+              ${d.nearMiss ? ' · <span style="color:var(--amber)">NEAR MISS</span>' : ""}
+            </div>` : "";
+        const price = bot.btcPrice ? `<span class="meta">BTC ${fmtUsd(bot.btcPrice)}</span>` : "";
+        return `<section class="block">
+          <div class="lbl">Crypto · Donchian ${price}</div>
+          ${posHtml}${decHtml}
+        </section>`;
+      }
+
+      function botCard(bot, clock, i, boot) {
+        const a = bot.alpaca;
+        const hp = healthPill(bot, clock);
+        const equityRow = a.ok
+          ? `<div class="row3">
+              <div class="readout"><span class="lbl">Equity</span><span class="val">${fmtUsd(a.equity)}</span></div>
+              <div class="readout"><span class="lbl">Day P&amp;L</span><span class="val ${cls(a.dayPL)}">${signUsd(a.dayPL)} ${a.dayPLpct != null ? `<span style="font-size:11px">(${a.dayPLpct >= 0 ? "+" : ""}${a.dayPLpct.toFixed(2)}%)</span>` : ""}</span></div>
+              <div class="readout"><span class="lbl">Cash</span><span class="val">${fmtUsd(a.cash)}</span></div>
+            </div>`
+          : `<div class="row3"><div class="err">⚠ ${esc(a.error)}</div></div>`;
+
+        return `<div class="card ${boot}" style="--i:${i}">
+          <div class="card-head">
+            <div>
+              <div class="id">${esc(bot.label)}</div>
+              <div class="flavor">${esc(bot.flavor)}</div>
+              <div class="acct">${esc(bot.account)}${bot.paper ? " · paper" : ""}</div>
+            </div>
+            <span class="pill ${hp.cls}"><span class="led"></span>${hp.txt}</span>
+          </div>
+          ${equityRow}
+          <section class="block">
+            <div class="lbl">Equity Curve <span class="meta">last 30d</span></div>
+            ${a.ok ? sparkline(a.history) : '<div class="empty">—</div>'}
+          </section>
+          <section class="block">
+            <div class="lbl">Performance</div>
+            ${statsBlock(bot)}
+          </section>
+          <section class="block">
+            <div class="lbl">Open Positions <span class="count">${a.ok ? a.positions.length : 0}</span><span class="meta">tick ${ageLabel(bot.health.stockTickAgeMin)}</span></div>
+            ${a.ok ? positionsTable(a.positions) : '<div class="empty">—</div>'}
+          </section>
+          <section class="block">
+            <div class="lbl">Today's Trades <span class="count">${bot.stockToday.length}</span></div>
+            ${tradesTable(bot.stockToday)}
+          </section>
+          <section class="block">
+            <div class="lbl">Watchlist <span class="count">${bot.watchlist.length}</span><span class="meta">scan ${ageLabel(bot.health.scanAgeMin)}</span></div>
+            ${watchlistChips(bot.watchlist)}
+          </section>
+          ${bot.hasCrypto ? cryptoBlock(bot) : ""}
+        </div>`;
+      }
+
+      // uptick / downtick flash on changing numbers
+      function setTick(el, text, val) {
+        const prev = el.dataset.v === "" || el.dataset.v == null ? null : Number(el.dataset.v);
+        el.textContent = text;
+        if (prev != null && val != null && val !== prev) {
+          el.classList.remove("tick-up", "tick-down");
+          void el.offsetWidth;
+          el.classList.add(val > prev ? "tick-up" : "tick-down");
+        }
+        el.dataset.v = val == null ? "" : val;
+      }
+
+      let firstRender = true;
+      let failures = 0;
+      // Latest ONLINE counts from the last data fetch; the clock ticks independently (1s).
+      let lastOnline = { reporting: 0, total: 0 };
+      function tickClock() {
+        const now = new Date().toLocaleTimeString([], { hour12: false }); // live HH:MM:SS
+        $("sysline").textContent =
+          `${lastOnline.reporting}/${lastOnline.total} ONLINE · ${now}`;
+      }
+      async function refresh() {
+        try {
+          const r = await fetch("/api/state", { cache: "no-store" });
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          const d = await r.json();
+          failures = 0;
+          $("banner").style.display = "none";
+          render(d);
+        } catch (e) {
+          failures++;
+          const b = $("banner");
+          b.style.display = "block";
+          b.textContent = "⚠ Lost link to dashboard server (" + esc(e.message) + ") — is server.js running? Retry " + failures;
+        }
+      }
+
+      function render(d) {
+        const c = d.combined;
+        setTick($("combEquity"), fmtUsd(c.equity), c.equity);
+        const plTxt = signUsd(c.dayPL) + (c.dayPLpct != null ? ` (${c.dayPLpct >= 0 ? "+" : ""}${c.dayPLpct.toFixed(2)}%)` : "");
+        const plEl = $("combPL");
+        setTick(plEl, plTxt, c.dayPL);
+        plEl.classList.add(cls(c.dayPL));
+        $("combPos").textContent = c.openPositions + (c.accountsReporting < c.accountsTotal ? ` ⚠${c.accountsReporting}/${c.accountsTotal}` : "");
+
+        const clk = $("clock");
+        if (d.clock) {
+          clk.className = "clock " + (d.clock.isOpen ? "open" : "");
+          clk.textContent = d.clock.isOpen
+            ? "● MARKET OPEN"
+            : "MARKET CLOSED · " + new Date(d.clock.nextOpen).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" });
+        }
+        lastOnline = { reporting: c.accountsReporting, total: c.accountsTotal };
+        tickClock();
+        $("combChart").innerHTML = sparkline(c.history, 150, 38);
+
+        const boot = firstRender ? "boot" : "";
+        $("grid").innerHTML = d.bots.map((b, i) => botCard(b, d.clock, i, boot)).join("");
+        firstRender = false;
+      }
+
+      $("fsBtn").addEventListener("click", () => {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+        else document.exitFullscreen();
+      });
+
+      refresh();
+      setInterval(refresh, 10000); // data fetch (Alpaca + bot files)
+      setInterval(tickClock, 1000); // live clock, accurate to the second
+    </script>
+  </body>
+</html>

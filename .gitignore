@@ -1,0 +1,38 @@
+# ── Secrets — never commit ──────────────────────────────────────────────
+# Each bot's .env holds live Alpaca keys; cdp_api_key.json is a Coinbase
+# ES256 private key; alpacarecovery.txt is an account recovery credential.
+.env
+.env.*
+!.env.example
+cdp_api_key.json
+alpacarecovery.txt
+*.pem
+*.p8
+*.key
+
+# ── Dependencies ────────────────────────────────────────────────────────
+node_modules/
+
+# ── Upstream clones, renamed out of the way pending deletion ────────────
+# bot b/ and bot c/ were clones of the third-party repo this started from.
+.git.upstream-backup/
+
+# ── Runtime state — rewritten every cycle, meaningless in history ───────
+position.json
+stock-state*.json
+safety-check-log.json
+.bar-cache/
+
+# ── Logs ────────────────────────────────────────────────────────────────
+# Live bot logs churn constantly. The archived Bot A run is frozen evidence
+# behind POSTMORTEM-BOT-A.md, so that one is kept.
+*.log
+!archive/**/*.log
+
+# ── Cached historical candles — large and re-downloadable ───────────────
+crypto/data/
+
+# ── OS noise ────────────────────────────────────────────────────────────
+Thumbs.db
+desktop.ini
+.DS_Store

@@ -1,0 +1,17 @@
+{
+  "name": "trading-bot",
+  "version": "1.0.0",
+  "description": "Paper-trading bots: crypto donchian on Coinbase Advanced + stock ORB on Alpaca, with a backtesting toolkit",
+  "type": "module",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "node bot.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

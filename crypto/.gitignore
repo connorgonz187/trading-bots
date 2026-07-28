@@ -1,0 +1,8 @@
+.env
+.env.b
+*.log
+safety-check-log.json
+position.json
+stock-state*.json
+node_modules/
+data/
