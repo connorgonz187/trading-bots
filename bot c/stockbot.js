@@ -340,7 +340,8 @@ async function main() {
   const watchlist = readWatchlist(now.date);
   if (!watchlist.length) {
     console.log("  no watchlist for today — run scan.js pre-market.");
-    return;
+    saveState(state); // this path used to drop state — losing any exit detected
+    return;           // above, and any P/L booked by the stranded sweep.
   }
   console.log(`  watchlist: ${watchlist.join(", ")}`);
 
