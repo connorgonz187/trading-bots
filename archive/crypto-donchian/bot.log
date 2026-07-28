@@ -1,0 +1,1749 @@
+
+📄 Trade log: /C:/Users/larry/OneDrive/Documents/Trading/inspect-trading-bot/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-05T01:04:01.117Z
+  Mode: 📋 PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: VWAP + RSI(3) + EMA(8) Scalping Strategy
+Symbol: BTC-USD | Timeframe: 1H
+
+── Trade Limits ─────────────────────────────────────────
+
+✅ Trades today: 0/5 — within limit
+✅ Trade size: $1.00 — within max $50
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $63128.82
+  EMA(8):  $63540.86
+  VWAP:    $63499.15
+  RSI(3):  56.15
+
+── Safety Check ─────────────────────────────────────────
+
+  Bias: BEARISH — checking short entry conditions
+
+  ✅ Price below VWAP (sellers in control)
+     Required: < 63499.15 | Actual: 63128.82
+  ✅ Price below EMA(8) (downtrend confirmed)
+     Required: < 63540.86 | Actual: 63128.82
+  🚫 RSI(3) above 70 (reversal setup in downtrend)
+     Required: > 70 | Actual: 56.15
+  ✅ Price within 1.5% of VWAP (not overextended)
+     Required: < 1.5% | Actual: 0.58%
+
+── Decision ─────────────────────────────────────────────
+
+🚫 TRADE BLOCKED
+   Failed conditions:
+   - RSI(3) above 70 (reversal setup in downtrend)
+
+Decision log saved → safety-check-log.json
+Bot error: Error: EBUSY: resource busy or locked, open 'C:\Users\larry\OneDrive\Documents\Trading\inspect-trading-bot\trades.csv'
+    at Object.writeFileSync (node:fs:2422:20)
+    at appendFileSync (node:fs:2504:6)
+    at writeTradeCsv (file:///C:/Users/larry/OneDrive/Documents/Trading/inspect-trading-bot/bot.js:504:3)
+    at run (file:///C:/Users/larry/OneDrive/Documents/Trading/inspect-trading-bot/bot.js:709:3)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  errno: -4082,
+  code: 'EBUSY',
+  syscall: 'open',
+  path: 'C:\\Users\\larry\\OneDrive\\Documents\\Trading\\inspect-trading-bot\\trades.csv'
+}
+
+📄 Trade log: /C:/Users/larry/OneDrive/Documents/Trading/inspect-trading-bot/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-05T01:05:04.516Z
+  Mode: 📋 PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: VWAP + RSI(3) + EMA(8) Scalping Strategy
+Symbol: BTC-USD | Timeframe: 1H
+
+── Trade Limits ─────────────────────────────────────────
+
+✅ Trades today: 0/5 — within limit
+✅ Trade size: $1.00 — within max $50
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $63128.82
+  EMA(8):  $63540.86
+  VWAP:    $63499.15
+  RSI(3):  56.15
+
+── Safety Check ─────────────────────────────────────────
+
+  Bias: BEARISH — checking short entry conditions
+
+  ✅ Price below VWAP (sellers in control)
+     Required: < 63499.15 | Actual: 63128.82
+  ✅ Price below EMA(8) (downtrend confirmed)
+     Required: < 63540.86 | Actual: 63128.82
+  🚫 RSI(3) above 70 (reversal setup in downtrend)
+     Required: > 70 | Actual: 56.15
+  ✅ Price within 1.5% of VWAP (not overextended)
+     Required: < 1.5% | Actual: 0.58%
+
+── Decision ─────────────────────────────────────────────
+
+🚫 TRADE BLOCKED
+   Failed conditions:
+   - RSI(3) above 70 (reversal setup in downtrend)
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+📄 Trade log: /C:/Users/larry/OneDrive/Documents/Trading/inspect-trading-bot/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-05T01:20:32.142Z
+  Mode: 📋 PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: VWAP + RSI(3) + EMA(8) Scalping Strategy
+Symbol: BTC-USD | Timeframe: 1H
+
+── Trade Limits ─────────────────────────────────────────
+
+✅ Trades today: 0/5 — within limit
+✅ Trade size: $1.00 — within max $50
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $63310.00
+  EMA(8):  $63540.86
+  VWAP:    $63437.05
+  RSI(3):  56.15
+
+── Safety Check ─────────────────────────────────────────
+
+  Bias: BEARISH — checking short entry conditions
+
+  ✅ Price below VWAP (sellers in control)
+     Required: < 63437.05 | Actual: 63310.00
+  ✅ Price below EMA(8) (downtrend confirmed)
+     Required: < 63540.86 | Actual: 63310.00
+  🚫 RSI(3) above 70 (reversal setup in downtrend)
+     Required: > 70 | Actual: 56.15
+  ✅ Price within 1.5% of VWAP (not overextended)
+     Required: < 1.5% | Actual: 0.20%
+
+── Decision ─────────────────────────────────────────────
+
+🚫 TRADE BLOCKED
+   Failed conditions:
+   - RSI(3) above 70 (reversal setup in downtrend)
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+📄 Trade log: /C:/Users/larry/OneDrive/Documents/Trading/inspect-trading-bot/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-05T02:03:01.804Z
+  Mode: 📋 PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: VWAP + RSI(3) + EMA(8) Scalping Strategy
+Symbol: BTC-USD | Timeframe: 1H
+
+── Trade Limits ─────────────────────────────────────────
+
+✅ Trades today: 0/5 — within limit
+✅ Trade size: $1.00 — within max $50
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $63283.95
+  EMA(8):  $63540.86
+  VWAP:    $63387.23
+  RSI(3):  56.15
+
+── Safety Check ─────────────────────────────────────────
+
+  Bias: BEARISH — checking short entry conditions
+
+  ✅ Price below VWAP (sellers in control)
+     Required: < 63387.23 | Actual: 63283.95
+  ✅ Price below EMA(8) (downtrend confirmed)
+     Required: < 63540.86 | Actual: 63283.95
+  🚫 RSI(3) above 70 (reversal setup in downtrend)
+     Required: > 70 | Actual: 56.15
+  ✅ Price within 1.5% of VWAP (not overextended)
+     Required: < 1.5% | Actual: 0.16%
+
+── Decision ─────────────────────────────────────────────
+
+🚫 TRADE BLOCKED
+   Failed conditions:
+   - RSI(3) above 70 (reversal setup in downtrend)
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+📄 Trade log: /C:/Users/larry/OneDrive/Documents/Trading/inspect-trading-bot/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-05T03:03:01.808Z
+  Mode: 📋 PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: VWAP + RSI(3) + EMA(8) Scalping Strategy
+Symbol: BTC-USD | Timeframe: 1H
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $62533.21
+  EMA(8):  $63485.27
+  VWAP:    $63180.63
+  RSI(3):  21.98
+
+── Safety Check ─────────────────────────────────────────
+
+  Bias: BEARISH — checking short entry conditions
+
+  ✅ Price below VWAP (sellers in control)
+     Required: < 63180.63 | Actual: 62533.21
+  ✅ Price below EMA(8) (downtrend confirmed)
+     Required: < 63485.27 | Actual: 62533.21
+  🚫 RSI(3) above 70 (reversal setup in downtrend)
+     Required: > 70 | Actual: 21.98
+  ✅ Price within 1.5% of VWAP (not overextended)
+     Required: < 1.5% | Actual: 1.02%
+
+── Decision ─────────────────────────────────────────────
+
+🚫 NO ENTRY
+   Failed conditions:
+   - RSI(3) above 70 (reversal setup in downtrend)
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+📄 Trade log: /C:/Users/larry/OneDrive/Documents/Trading/inspect-trading-bot/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-05T03:30:14.393Z
+  Mode: 📋 PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: VWAP + RSI(3) + EMA(8) Scalping Strategy
+Symbol: BTC-USD | Timeframe: 1H
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $62506.60
+  EMA(8):  $63276.16
+  VWAP:    $63041.89
+  RSI(3):  N/A
+
+⚠️  Not enough data to calculate indicators. Exiting.
+
+📄 Trade log: /C:/Users/larry/OneDrive/Documents/Trading/inspect-trading-bot/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-05T04:03:01.792Z
+  Mode: 📋 PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: VWAP + RSI(3) + EMA(8) Scalping Strategy
+Symbol: BTC-USD | Timeframe: 1H
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $62643.61
+  EMA(8):  $63276.16
+  VWAP:    $63012.60
+  RSI(3):  N/A
+
+⚠️  Not enough data to calculate indicators. Exiting.
+
+📄 Trade log: /C:/Users/larry/OneDrive/Documents/Trading/inspect-trading-bot/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-05T04:04:20.135Z
+  Mode: 📋 PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: VWAP + RSI(3) + EMA(8) Scalping Strategy
+Symbol: BTC-USD | Timeframe: 1H
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $62516.58
+  EMA(8):  $63138.86
+  VWAP:    $63008.66
+  RSI(3):  12.45
+
+── Safety Check ─────────────────────────────────────────
+
+  Bias: BEARISH — checking short entry conditions
+
+  ✅ Price below VWAP (sellers in control)
+     Required: < 63008.66 | Actual: 62516.58
+  ✅ Price below EMA(8) (downtrend confirmed)
+     Required: < 63138.86 | Actual: 62516.58
+  🚫 RSI(3) above 70 (reversal setup in downtrend)
+     Required: > 70 | Actual: 12.45
+  ✅ Price within 1.5% of VWAP (not overextended)
+     Required: < 1.5% | Actual: 0.78%
+
+── Decision ─────────────────────────────────────────────
+
+🚫 NO ENTRY
+   Failed conditions:
+   - RSI(3) above 70 (reversal setup in downtrend)
+
+Decision log saved → safety-check-log.json
+⚠️  Couldn't write trades.csv (likely open in Excel / OneDrive lock). This decision is still recorded in safety-check-log.json.
+═══════════════════════════════════════════════════════════
+
+
+📄 Trade log: /C:/Users/larry/OneDrive/Documents/Trading/inspect-trading-bot/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-05T04:04:29.123Z
+  Mode: 📋 PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: VWAP + RSI(3) + EMA(8) Scalping Strategy
+Symbol: BTC-USD | Timeframe: 1H
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $62516.58
+  EMA(8):  $63138.86
+  VWAP:    $63008.66
+  RSI(3):  12.45
+
+── Safety Check ─────────────────────────────────────────
+
+  Bias: BEARISH — checking short entry conditions
+
+  ✅ Price below VWAP (sellers in control)
+     Required: < 63008.66 | Actual: 62516.58
+  ✅ Price below EMA(8) (downtrend confirmed)
+     Required: < 63138.86 | Actual: 62516.58
+  🚫 RSI(3) above 70 (reversal setup in downtrend)
+     Required: > 70 | Actual: 12.45
+  ✅ Price within 1.5% of VWAP (not overextended)
+     Required: < 1.5% | Actual: 0.78%
+
+── Decision ─────────────────────────────────────────────
+
+🚫 NO ENTRY
+   Failed conditions:
+   - RSI(3) above 70 (reversal setup in downtrend)
+
+Decision log saved → safety-check-log.json
+⚠️  Couldn't write trades.csv (likely open in Excel / OneDrive lock). This decision is still recorded in safety-check-log.json.
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/larry/OneDrive/Documents/Trading/inspect-trading-bot/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-05T16:00:00.707Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $60467.78
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/larry/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-06T16:00:02.393Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $60753.50
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-07T16:00:01.969Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $62052.25
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-08T16:00:01.455Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $63755.98
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-09T16:00:01.750Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $61032.01
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-10T16:00:02.017Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $62589.99
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-11T16:00:02.031Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $62633.98
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-12T16:00:02.022Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $63630.89
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-13T16:00:02.963Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $64251.17
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-14T16:00:02.480Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $63986.04
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-15T16:00:01.667Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $67192.68
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-16T16:00:01.706Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $65907.49
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-17T16:00:01.758Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $65639.77
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-18T16:00:01.732Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+Bot error: [TypeError: fetch failed] {
+  [cause]: ConnectTimeoutError: Connect Timeout Error (attempted addresses: 104.18.36.178:443, 172.64.151.78:443, timeout: 10000ms)
+      at onConnectTimeout (node:internal/deps/undici/undici:1991:23)
+      at Immediate._onImmediate (node:internal/deps/undici/undici:1957:35)
+      at process.processImmediate (node:internal/timers:504:21) {
+    code: 'UND_ERR_CONNECT_TIMEOUT'
+  }
+}
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-19T16:00:01.264Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+Bot error: [TypeError: fetch failed] {
+  [cause]: ConnectTimeoutError: Connect Timeout Error (attempted addresses: 104.18.36.178:443, 172.64.151.78:443, timeout: 10000ms)
+      at onConnectTimeout (node:internal/deps/undici/undici:1991:23)
+      at Immediate._onImmediate (node:internal/deps/undici/undici:1957:35)
+      at process.processImmediate (node:internal/timers:504:21) {
+    code: 'UND_ERR_CONNECT_TIMEOUT'
+  }
+}
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-20T16:00:01.200Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+Bot error: [TypeError: fetch failed] {
+  [cause]: ConnectTimeoutError: Connect Timeout Error (attempted address: api.exchange.coinbase.com:443, timeout: 10000ms)
+      at onConnectTimeout (node:internal/deps/undici/undici:1991:23)
+      at Immediate._onImmediate (node:internal/deps/undici/undici:1957:35)
+      at process.processImmediate (node:internal/timers:504:21) {
+    code: 'UND_ERR_CONNECT_TIMEOUT'
+  }
+}
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-21T16:00:01.271Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+Bot error: [TypeError: fetch failed] {
+  [cause]: Error: getaddrinfo ENOTFOUND api.exchange.coinbase.com
+      at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26) {
+    errno: -3008,
+    code: 'ENOTFOUND',
+    syscall: 'getaddrinfo',
+    hostname: 'api.exchange.coinbase.com'
+  }
+}
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-22T16:00:01.286Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+Bot error: [TypeError: fetch failed] {
+  [cause]: Error: getaddrinfo ENOTFOUND api.exchange.coinbase.com
+      at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26) {
+    errno: -3008,
+    code: 'ENOTFOUND',
+    syscall: 'getaddrinfo',
+    hostname: 'api.exchange.coinbase.com'
+  }
+}
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-23T16:00:01.280Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $62363.60
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-24T16:00:01.319Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $60223.01
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-25T16:00:01.300Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $59299.02
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-26T16:00:01.310Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $60260.32
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-27T16:00:04.519Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $60709.43
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-28T16:00:05.082Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $59763.15
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-29T16:00:01.301Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $59704.77
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-06-30T16:00:01.331Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $58405.57
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-01T16:00:01.353Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $60063.86
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-02T16:00:01.350Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $61518.04
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-03T16:00:02.033Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $61867.95
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-04T16:00:05.444Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $62881.66
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-05T16:00:03.845Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $62686.17
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-06T16:00:02.050Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $63410.01
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-07T16:00:02.082Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $63863.34
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-08T18:27:45.203Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $62147.76
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-09T16:00:01.966Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+Bot error: [TypeError: fetch failed] {
+  [cause]: Error: getaddrinfo ENOTFOUND api.exchange.coinbase.com
+      at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26) {
+    errno: -3008,
+    code: 'ENOTFOUND',
+    syscall: 'getaddrinfo',
+    hostname: 'api.exchange.coinbase.com'
+  }
+}
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-10T16:00:01.948Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $63970.42
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-11T16:00:04.615Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $64116.04
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-12T16:00:04.694Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $64133.16
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-13T16:00:01.894Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $62518.22
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-14T16:00:01.818Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $64570.10
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-15T16:00:01.838Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $65374.00
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-16T16:00:01.393Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $64673.19
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-17T16:00:01.349Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $63330.00
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-18T16:00:04.207Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $64072.48
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-19T16:00:04.681Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $64529.03
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-20T16:00:01.358Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $65529.73
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-21T16:00:01.376Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $66686.01
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-22T16:00:01.378Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $65981.30
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-23T16:00:01.371Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $64906.55
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-24T16:00:01.381Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $64118.10
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-25T16:00:04.518Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $64121.93
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-26T16:00:04.578Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $64716.00
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+
+
+Trade log: /C:/Users/sticx/OneDrive/Documents/Trading/bot%20a/trades.csv
+   Open in Google Sheets or Excel any time — or tell Claude to move it:
+   "Move my trades.csv to ~/Desktop" or "Move it to my Documents folder"
+
+═══════════════════════════════════════════════════════════
+  Claude Trading Bot
+  2026-07-27T16:00:01.410Z
+  Mode: PAPER TRADING
+═══════════════════════════════════════════════════════════
+
+Strategy: donchian N55 M20 atr3x
+Symbol: BTC-USD | Timeframe: 1D
+
+── Fetching market data from Coinbase ───────────────────
+
+  Current price: $64507.00
+
+── Decision ─────────────────────────────────────────────
+
+NO ENTRY — no signal from donchian N55 M20 atr3x.
+
+Decision log saved → safety-check-log.json
+Tax record saved → trades.csv
+═══════════════════════════════════════════════════════════
+

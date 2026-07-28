@@ -5,7 +5,8 @@
       Set-ExecutionPolicy -Scope Process Bypass -Force
       .\setup-laptop.ps1
 
-  It registers up to 8 Windows scheduled tasks (paper trading) pointed at THIS machine's
+  It registers up to 7 Windows scheduled tasks — 4 for the ORB bots B and C, the
+  keep-awake guardian, and 2 for Bot E once swing\.env has real keys — pointed at THIS machine's
   copy of the bot folders, running as the current user via S4U (no stored password),
   and enables wake-from-sleep on AC power. It also UNREGISTERS the retired tasks.
 
@@ -13,8 +14,10 @@
     * Bot A's ORB (long-only) is RETIRED. Two months of forward testing produced
       -$752 on 83 trades, PF 0.56, 36% win rate. See POSTMORTEM-BOT-A.md.
       Its ORB tasks are removed; the folder is archived at archive/bot-a-orb/.
-    * The Coinbase crypto bot has moved out of "bot a" into its own crypto/ folder.
-      ClaudeTradingBot-Paper now points there.
+    * The Coinbase crypto bot is RETIRED. Zero entries in 48 daily decisions and
+      the route is no longer being explored. ClaudeTradingBot-Paper is removed;
+      the code is archived at archive/crypto-donchian/. The backtesting toolkit
+      it shared a folder with survives at backtest/ (stocks only by default).
     * Bot D is deleted. It never traded (placeholder API keys) and its premise came
       from a P&L pairing bug rather than a real result.
     * Bot E (swing/) added. Multi-day holds, so it needs its OWN paper account —
@@ -23,7 +26,7 @@
 
   PREREQS (do these first — see MIGRATION.md):
     1. Node.js LTS installed at C:\Program Files\nodejs\  (winget install OpenJS.NodeJS.LTS)
-    2. npm install run inside bot b, bot c, crypto, swing
+    2. npm install run inside bot b, bot c and swing
     3. Timezone set to US Eastern (tasks fire at 9:30 AM = market open, in LOCAL time)
 #>
 
@@ -35,7 +38,7 @@ $Node    = 'C:\Program Files\nodejs\node.exe'
 $User    = "$env:COMPUTERNAME\$env:USERNAME"
 
 if (-not (Test-Path $Node)) { throw "Node not found at $Node. Install Node LTS first." }
-foreach ($b in 'bot b','bot c','crypto','swing') {
+foreach ($b in 'bot b','bot c','swing') {
     if (-not (Test-Path (Join-Path $Trading $b))) { throw "Missing folder: $b under $Trading" }
 }
 Write-Host "Trading dir : $Trading"
@@ -82,21 +85,18 @@ function New-SwingTrigger {
 }
 
 # --- remove retired tasks ----------------------------------------------------
-# Bot A's ORB and every Bot D task. Safe to run repeatedly; ignores absent tasks.
+# Bot A's ORB, every Bot D task, and the Coinbase crypto bot. Safe to run
+# repeatedly; ignores absent tasks.
 Write-Host "Removing retired tasks..."
-foreach ($t in 'ORB-Scan','ORB-Bot','ORB-Scan-D','ORB-Bot-D') {
+foreach ($t in 'ORB-Scan','ORB-Bot','ORB-Scan-D','ORB-Bot-D','ClaudeTradingBot-Paper') {
     if (Get-ScheduledTask -TaskName $t -ErrorAction SilentlyContinue) {
         Unregister-ScheduledTask -TaskName $t -Confirm:$false
         Write-Host "  removed: $t"
     }
 }
 
-# --- the 6 live tasks --------------------------------------------------------
+# --- the 5 live tasks --------------------------------------------------------
 Write-Host "`nRegistering tasks..."
-
-# Crypto (Coinbase donchian) — every day at noon. Lives in crypto/ since 2026-07-28.
-Register-BotTask 'ClaudeTradingBot-Paper' (Join-Path $Trading 'crypto\run-bot.cmd') `
-    (New-ScheduledTaskTrigger -Daily -At 12:00pm)
 
 # Account B (long+short+trailing)
 Register-BotTask 'ORB-Scan-B' (Join-Path $Trading 'bot b\run-scan.cmd')     (New-WeekdayTrigger '9:00am')
@@ -154,7 +154,7 @@ powercfg /setactive SCHEME_CURRENT
 # --- OneDrive pin (only if the folders are under OneDrive) -------------------
 if ($Trading -like '*OneDrive*') {
     Write-Host "Pinning bot folders always-local (OneDrive)..."
-    foreach ($b in 'bot b','bot c','crypto','swing') {
+    foreach ($b in 'bot b','bot c','swing') {
         attrib +P -U (Join-Path $Trading "$b\*") /s /d 2>$null
     }
 }

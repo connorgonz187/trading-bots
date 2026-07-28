@@ -18,6 +18,9 @@
  *   ORB_MAX_POSITIONS     cap concurrent open positions (default 4).
  *   ORB_MAX_PER_SECTOR    cap positions in one correlated cluster (default 2).
  *   ORB_MAX_DAILY_LOSS    halt new entries once realized P/L ≤ −this (default 150).
+ *   STOCK_MAX_NOTIONAL_PCT  hard ceiling on one position's value as a % of account
+ *                         equity (default 7). Binds together with the fixed
+ *                         STOCK_MAX_NOTIONAL — the SMALLER of the two wins. 0 = off.
  *   STOCK_MIN_RISK_FRAC   skip a trade if the notional cap shrinks its risk below
  *                         this fraction of STOCK_RISK_USD (keeps risk comparable).
  *
@@ -28,7 +31,8 @@
  *   5-min cycle see the SAME data and their signals are comparable, not noise.
  *
  * Position size is RISK-BASED: shares so (entry - stop) * shares ~= RISK_USD,
- * capped at MAX_NOTIONAL. One entry per symbol per day. Flatten before the close.
+ * capped at the smaller of MAX_NOTIONAL (fixed $) and MAX_NOTIONAL_PCT of live
+ * account equity. One entry per symbol per day. Flatten before the close.
  *
  * Caveat: free Alpaca data is ~15 min delayed, so ENTRY signals lag; exits are
  * broker-side so they're precise. Paper account only. (Paper shorting ignores
@@ -56,6 +60,7 @@ import {
 } from "fs";
 import {
   getClock,
+  getAccount,
   getPositions,
   getOrders,
   getOrder,
@@ -75,6 +80,11 @@ const OR_MIN = parseInt(process.env.ORB_MINUTES || "15", 10);
 const R = parseFloat(process.env.ORB_R || "2");
 const RISK_USD = parseFloat(process.env.STOCK_RISK_USD || "50");
 const MAX_NOTIONAL = parseFloat(process.env.STOCK_MAX_NOTIONAL || "2000");
+// Equity-relative ceiling on a single position's value. The fixed MAX_NOTIONAL
+// above doesn't scale — on a drawn-down account $2,000 can be a third of the
+// book, on a grown one it's a rounding error. This caps any one trade at a fixed
+// SHARE of the account, so concentration stays constant as equity moves.
+const MAX_NOTIONAL_PCT = parseFloat(process.env.STOCK_MAX_NOTIONAL_PCT || "7") / 100;
 const SHORTS = /^(1|true|yes|on)$/i.test(process.env.ORB_SHORTS || "");
 const TRAILING = /^(1|true|yes|on)$/i.test(process.env.ORB_TRAILING || "");
 const LONGS = !/^(0|false|no|off)$/i.test(process.env.ORB_LONGS || "true"); // default on
@@ -358,6 +368,44 @@ async function main() {
     return;
   }
 
+  // ── Per-trade notional ceiling ──
+  // Two caps bind and the SMALLER wins: the fixed STOCK_MAX_NOTIONAL and
+  // STOCK_MAX_NOTIONAL_PCT of live account equity. Equity (cash + market value of
+  // open positions) is the honest denominator — NOT buying_power, which is
+  // margin-inflated and would let 7% of "tradeable" mean a multiple of what the
+  // account actually owns.
+  //
+  // Fetched once per cycle, and only here: this is the only branch that can open
+  // a position, so a closed market / empty watchlist costs no extra API call.
+  //
+  // Fails CLOSED. If the account can't be read (alpaca.js has already retried),
+  // we do not know the denominator, so we don't guess and we don't fall back to
+  // the fixed cap alone — no new entries this cycle. Exits, reconciliation and
+  // the EOD flatten all ran above and are unaffected.
+  let notionalCap = MAX_NOTIONAL;
+  if (MAX_NOTIONAL_PCT > 0) {
+    let equity = null;
+    try {
+      const acct = await getAccount();
+      equity = Number(acct.equity ?? acct.portfolio_value ?? acct.last_equity);
+    } catch (e) {
+      console.log(`  account lookup failed (${e.message}) — can't size vs equity, no new entries.`);
+      saveState(state);
+      return;
+    }
+    if (!Number.isFinite(equity) || equity <= 0) {
+      console.log(`  account equity unusable (${equity}) — no new entries.`);
+      saveState(state);
+      return;
+    }
+    state.equity = equity; // recorded for the trade log / postmortems
+    const pctCap = MAX_NOTIONAL_PCT * equity;
+    notionalCap = Math.min(MAX_NOTIONAL, pctCap);
+    console.log(
+      `  equity $${equity.toFixed(2)} | cap $${notionalCap.toFixed(2)} = min(fixed $${MAX_NOTIONAL.toFixed(0)}, ${(MAX_NOTIONAL_PCT * 100).toFixed(1)}% = $${pctCap.toFixed(2)})`,
+    );
+  }
+
   // Market regime — only trade WITH the tape (longs need SPY≥VWAP, shorts ≤VWAP).
   let regime = null;
   if (REGIME) {
@@ -466,8 +514,14 @@ async function main() {
       if (riskPerShare <= 0) continue;
       let qty = Math.floor(RISK_USD / riskPerShare);
       if (qty < 1) qty = 1;
-      if (qty * price > MAX_NOTIONAL) qty = Math.floor(MAX_NOTIONAL / price);
-      if (qty < 1) continue;
+      // Hard notional ceiling. Note the floor: if even ONE share is worth more
+      // than the cap this lands on 0 and the trade is skipped outright — the cap
+      // is never rounded up to "at least one share".
+      if (qty * price > notionalCap) qty = Math.floor(notionalCap / price);
+      if (qty < 1) {
+        console.log(`  ${sym}: 1sh @ $${price.toFixed(2)} exceeds the $${notionalCap.toFixed(0)} notional cap — skip.`);
+        continue;
+      }
 
       // If the notional cap shrank risk well below target, the trade isn't a fair
       // representative of the strategy (its P/L is dwarfed) — skip for comparability.

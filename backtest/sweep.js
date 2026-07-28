@@ -3,19 +3,27 @@
  * return. Uses cached data (one fetch). Usage: node sweep.js [tf] [days]
  */
 import { loadCandles, runBacktest } from "./engine.js";
+import { loadStockCandles } from "./alpaca-data.js";
 import { make } from "./strategies/meanrev.js";
 
 const tf = process.argv[2] || "1H";
 const days = Number(process.argv[3] || "120");
-const symbol = process.env.SYMBOL || "BTC-USD";
-const feePct = Number(process.env.BACKTEST_FEE_PCT || "0.6");
+const symbol = process.env.SYMBOL || "SPY";
+// Same routing rule as bt.js: dashless symbols are stocks (Alpaca, ~free),
+// dashed ones are pairs (Coinbase public candles, legacy).
+const isStock = !symbol.includes("-");
+const feePct = Number(
+  process.env.BACKTEST_FEE_PCT || (isStock ? "0.02" : "0.6"),
+);
 
 const RSI = [15, 20, 25, 30];
 const SL = [0.3, 0.6, 1.0];
 const TP = [0.6, 1.2, 2.0];
 const DIST = [1.0, 2.0, 5.0];
 
-const candles = await loadCandles(symbol, tf, days);
+const candles = isStock
+  ? await loadStockCandles(symbol, tf, days)
+  : await loadCandles(symbol, tf, days);
 const span = (candles[candles.length - 1].time - candles[0].time) / 86400000;
 console.log(
   `\nSweep meanrev — ${symbol} ${tf}, ${candles.length} candles (~${span.toFixed(0)}d), fee ${feePct}%/side\n`,

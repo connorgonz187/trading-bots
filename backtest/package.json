@@ -1,0 +1,17 @@
+{
+  "name": "trading-backtest",
+  "version": "1.0.0",
+  "description": "Offline backtesting toolkit for the Alpaca ORB bots — engine, strategies, candle cache",
+  "type": "module",
+  "main": "bt.js",
+  "scripts": {
+    "start": "node bt.js",
+    "sweep": "node sweep.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

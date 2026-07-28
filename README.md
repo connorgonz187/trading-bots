@@ -1,11 +1,10 @@
 # Trading bots — paper forward-test
 
-Two live **paper-trading** experiments, a third built but not yet funded, plus a
-backtesting toolkit and a local read-only dashboard. Nothing here has ever
+Two live **paper-trading** experiments, a third funded but not yet scheduled,
+plus a backtesting toolkit and a local read-only dashboard. Nothing here has ever
 placed a live order, and the live paths are latched off by design.
 
-> **Status: PAPER.** Alpaca points at `paper-api.alpaca.markets`; the Coinbase
-> live path requires `COINBASE_LIVE_CONFIRM` and is blank. See
+> **Status: PAPER.** Alpaca points at `paper-api.alpaca.markets`. See
 > [Going live](#going-live).
 
 ---
@@ -16,10 +15,11 @@ placed a live order, and the live paths are latched off by design.
 |---|---|
 | `bot b/` | Alpaca ORB — long **+** short, ATR trailing exit (`PA3ZJ1EX28BW`) |
 | `bot c/` | Alpaca ORB — short-only, fixed 2R bracket (`PA3ZMXLQJZXX`) |
-| `swing/` | **Bot E** — multi-day swing, 2% stop / 5% target, holds overnight (needs its own account) |
-| `crypto/` | Coinbase Advanced donchian 55/20 daily + the backtesting toolkit |
+| `swing/` | **Bot E** — multi-day swing, 2% stop / 5% target, holds overnight (`PA3RN0YU53QN`) |
+| `backtest/` | Offline strategy research — engine, strategies, candle cache |
 | `dashboard/` | Local read-only monitor (`node dashboard/server.js` → :4000) |
 | `archive/bot-a-orb/` | Retired Bot A (long-only ORB) — code and full trade history |
+| `archive/crypto-donchian/` | Retired Coinbase donchian bot — code and decision log |
 
 `bot b` and `bot c` are **runtime clones of identical code**. Only `.env`
 differs. If you edit shared logic (`stockbot.js`, `alpaca.js`, `scan.js`,
@@ -38,8 +38,8 @@ reconstructed from **Alpaca fill records** and reconciled against account equity
 | ~~A~~ | ORB long-only, fixed 2R | 83 | 36.1% | 0.56 | **−$752.19** |
 | B | ORB long+short, ATR trail | 150 | 38.0% | 0.96 | −$52.84 |
 | C | ORB short-only, fixed 2R | 80 | 55.0% | 0.98 | −$36.42 |
-| Crypto | Donchian 55/20 daily | 0 | — | — | $0.00 |
-| E | Swing 2%/5%, multi-day | 0 | — | — | not yet funded |
+| ~~Crypto~~ | Donchian 55/20 daily | 0 | — | — | $0.00 |
+| E | Swing 2%/5%, multi-day | 0 | — | — | $0.00 (funded, not yet scheduled) |
 
 **Bot A was retired 2026-07-28** — see [POSTMORTEM-BOT-A.md](POSTMORTEM-BOT-A.md).
 Short summary: it needed a 50.8% win rate to break even and delivered 36.1%,
@@ -49,26 +49,33 @@ because the 2R target filled on 2.5% of trades while the stop filled on 39.2%.
 synthesis, but it never traded (placeholder API keys) and the comparison that
 justified it came from a P&L pairing bug, not from the market.
 
+**The crypto bot was retired 2026-07-28** — see
+[archive/crypto-donchian/](archive/crypto-donchian/). It took zero trades in 48
+daily decisions. That was *correct* behaviour rather than a fault — donchian
+55/20 is meant to trade rarely and BTC never broke its 55-day high — but two
+months that generate no sample also generate no information, so the route was
+dropped rather than tuned. The backtesting toolkit it shared a folder with
+survives at `backtest/`.
+
 **B vs C is genuinely open.** Both are within $55 of flat. Bot B's internal
 split is the most useful signal so far — long sleeve −$270 (PF 0.67) vs short
 sleeve +$217 (PF 1.31), perfectly matched on data, timing and regime.
 
-The crypto bot has taken zero trades in 48 daily decisions. That is correct
-behaviour — donchian 55/20 is meant to trade rarely, and BTC never broke its
-55-day high in the window.
-
-**Bot E (`swing/`) is built but not funded.** It was written to test the idea
-that the ORB bots exit too low — that holding a day or more would have turned
-scratches into 4–7% gains. That idea was measured *before* the bot was wired up
-and it **failed**: 62% of the ORB bots' own entries did reach +5% within five
-days, but only 2% got there before touching a 2% stop, because the same names'
-median five-day drawdown is −8.7%. Widening the stop to 8% still only reaches
-profit factor 0.67. Bot E's own (different) entry rule backtests at PF 1.02 over
-224 trades — flat. Full write-up and reproduction commands in
+**Bot E (`swing/`) has its own paper account (`PA3RN0YU53QN`, $100k) but has not
+traded yet** — its scheduled tasks still need registering. It was written to test
+the idea that the ORB bots exit too low: that holding a day or more would have
+turned scratches into 4–7% gains. That idea was measured *before* the bot was
+wired up and it **failed**: 62% of the ORB bots' own entries did reach +5% within
+five days, but only 2% got there before touching a 2% stop, because the same
+names' median five-day drawdown is −8.7%. Widening the stop to 8% still only
+reaches profit factor 0.67. Bot E's own (different) entry rule backtests at PF
+1.02 over 224 trades — flat. Full write-up and reproduction commands in
 [swing/FINDINGS.md](swing/FINDINGS.md).
 
-That is the intended use of this repo's tooling: kill a premise on measured data
-before it becomes a funded account, which is the one thing Bot D failed to do.
+It is funded anyway because a flat backtest is still worth a forward test, and
+because the swing question deserves its own answer rather than an inherited one.
+That is the intended use of this repo's tooling: measure a premise before it
+becomes a funded account, which is the one thing Bot D failed to do.
 
 ---
 
@@ -96,7 +103,7 @@ node dashboard/server.js     # then open http://localhost:4000
 ## Setup
 
 1. **Node 18+** at `C:\Program Files\nodejs\` (the `run-*.cmd` launchers hardcode it).
-2. `npm install` inside `bot b`, `bot c`, `crypto`, and `swing`.
+2. `npm install` inside `bot b`, `bot c` and `swing` (and `backtest` if you'll use it).
 3. Copy `.env.example` → `.env` in each folder and fill it in. Every variable the
    code reads is documented there. `.env` is gitignored.
 4. Set the machine timezone to **US Eastern** — scheduled tasks fire in local
@@ -106,9 +113,9 @@ node dashboard/server.js     # then open http://localhost:4000
    Set-ExecutionPolicy -Scope Process Bypass -Force
    .\setup-laptop.ps1
    ```
-   This registers 8 tasks (crypto daily at noon; scan + bot for B, C and E on
-   weekdays) and removes the retired Bot A / Bot D tasks. Bot E's tasks are
-   skipped automatically if `swing/.env` has no keys yet.
+   This registers 7 tasks (scan + bot for B, C and E on weekdays, plus the
+   keep-awake guardian) and removes the retired Bot A, Bot D and crypto tasks.
+   Bot E's two tasks are skipped automatically if `swing/.env` has no keys yet.
 
 Full machine-migration notes are in [MIGRATION.md](MIGRATION.md).
 
@@ -128,6 +135,16 @@ Alpaca holds both legs server-side so they fill intrabar. Position size is
 
 Safeguards, all env-tunable and on by default:
 
+- **Concentration cap** — no single position may be worth more than
+  `STOCK_MAX_NOTIONAL_PCT` (default **7**) percent of account **equity**, read
+  live from Alpaca each cycle. Equity, not `buying_power`: the paper accounts
+  carry 4× margin, so sizing off buying power would let "7%" mean 28% of what
+  the account actually owns. This binds together with the fixed
+  `STOCK_MAX_NOTIONAL` and **the smaller of the two wins**, so it can only ever
+  tighten sizing. At ~$100k equity the fixed $2,000 cap is the binding one; the
+  percentage takes over below ~$28.6k. It fails **closed** — if the account
+  can't be read, the cycle takes no new entries (exits and the EOD flatten still
+  run).
 - **Regime filter** — longs only when SPY ≥ session VWAP, shorts only when ≤.
   Inverse ETFs are evaluated on economic direction, not order side.
 - **Correlation caps** — `ORB_MAX_PER_SECTOR` stops SOXL + MRVL + INTC counting
@@ -154,9 +171,10 @@ target resting **GTC** at the broker, held up to 10 trading days.
 
 Two consequences worth knowing before running it:
 
-- **It needs its own paper account.** B and C sweep any position still open at
-  the first cycle of a new session. Sharing an account with them means Bot E's
-  swings get closed at the next open, silently.
+- **It runs on its own paper account** (`PA3RN0YU53QN`). This is not optional:
+  B and C sweep any position still open at the first cycle of a new session, so
+  sharing an account with them would close Bot E's swings at the next open,
+  silently.
 - **A stop does not cap a gap.** 13% of backtested trades gapped through the
   stop (worst −9.9%), so the "losses are 1–2%" claim holds intraday and fails
   overnight. Size for the gap, not the stop.
@@ -168,48 +186,26 @@ being noise. See [swing/README.md](swing/README.md) and
 
 ---
 
-## The crypto bot
-
-`crypto/bot.js` pulls daily candles from Coinbase, runs the strategy named by
-`STRATEGY` (default `strategies/donchian.js`), and tracks the one position it
-opened in `position.json`. It **only ever sells what it itself bought.**
+## Backtesting
 
 ```powershell
-cd crypto
-node bot.js --check-auth     # read-only; proves keys + IP allowlist
-node bot.js                  # one decision cycle (paper)
-node bot.js --tax-summary    # totals from trades.csv
+cd backtest
+node bt.js strategies/orb.js 5m 60             # default SYMBOL=SPY
+node bt.js strategies/trend-ma.js 1D 365 365   # out-of-sample window
+node sweep.js                                  # parameter grid
 ```
 
-Donchian: enter when the daily close breaks the highest high of the prior 55
-days; exit below the prior 20-day low or an ATR(20)×3 stop.
-
-### Backtesting
-
-```powershell
-cd crypto
-node bt.js 90 BTC-USD 1D     # pluggable engine: days, symbol, timeframe
-node bt.js 60 SPY 5Min       # stock symbols auto-route to Alpaca data
-node sweep.js                # parameter sweep
-```
-
-`strategies/_validation.md` is the honest write-up of what the backtests found —
-including that every sub-window rests on 0–5 trades and none of it clears a high
-bar on sample size. Donchian is the default because it was the most *robust*,
-not the most impressive.
+See [backtest/README.md](backtest/README.md). Before trusting any result, read
+`backtest/strategies/_validation.md` — every sub-window in it rests on 0–5
+trades, and it was all measured on crypto at crypto fees.
 
 ---
 
 ## Going live
 
-Deliberately disabled. Before changing anything: pass `--check-auth`, watch
-paper for weeks, then test on a tiny sub-account.
+Deliberately disabled. Repoint `APCA_BASE_URL` only after the paper test
+convinces you — on the evidence so far, it should not.
 
-- **Crypto:** requires `PAPER_TRADING=false` **and**
-  `COINBASE_LIVE_CONFIRM=I_UNDERSTAND`. The bracket order field semantics follow
-  Coinbase's docs but are **unverified against a live fill**.
-- **Stocks:** repoint `APCA_BASE_URL` only after the paper test convinces you.
-  On the evidence so far, it should not.
-
-**This is not financial advice.** Nothing here is proven profitable. Two of
-three strategies are flat-to-negative and the third was retired for losing money.
+**This is not financial advice.** Nothing here is proven profitable. Both
+surviving strategies are flat-to-negative; the other two were retired, one for
+losing money and one for producing no evidence at all.
