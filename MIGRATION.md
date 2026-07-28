@@ -6,17 +6,20 @@ scheduled tasks and power settings are machine-specific and must be recreated.
 ## What's in this folder
 - `bot b/` — Alpaca ORB, **long+short+trailing** (account PA3ZJ1EX28BW)
 - `bot c/` — Alpaca ORB, **short-only** (account PA3ZMXLQJZXX)
-- `crypto/` — Coinbase donchian bot + the backtesting toolkit
+- `backtest/` — offline strategy research; nothing scheduled, nothing to migrate
 - `archive/bot-a-orb/` — retired Bot A (long-only ORB); no tasks, nothing to migrate
-- `cdp_api_key.json` — Coinbase API key (top level, NOT inside a bot folder)
+- `archive/crypto-donchian/` — retired Coinbase bot; no tasks, nothing to migrate
 - `alpacarecovery.txt` — Alpaca recovery UUID (a credential — keep it)
+- `cdp_api_key.json` — Coinbase API key. The crypto bot is retired, so **do not
+  copy this to the new machine — revoke it in the Coinbase developer portal.**
 - Each bot folder has its own `.env` (API keys + per-account flags) — **hidden file, make sure it copied over**
 
-> **Layout changed 2026-07-28.** The crypto bot moved out of `bot a/` into
-> `crypto/`; Bot A's ORB was retired (see `POSTMORTEM-BOT-A.md`) and Bot D was
-> deleted. If you are migrating from a machine that predates this, re-run
+> **Layout changed 2026-07-28.** Bot A's ORB was retired (see
+> `POSTMORTEM-BOT-A.md`), Bot D was deleted, and the Coinbase crypto bot was
+> retired to `archive/crypto-donchian/` — its backtesting toolkit survives at
+> `backtest/`. If you are migrating from a machine that predates this, re-run
 > `setup-laptop.ps1` — it unregisters the old `ORB-Scan` / `ORB-Bot` /
-> `ORB-*-D` tasks as part of setup.
+> `ORB-*-D` / `ClaudeTradingBot-Paper` tasks as part of setup.
 
 ## Setup on the new machine
 
@@ -34,31 +37,28 @@ scheduled tasks and power settings are machine-specific and must be recreated.
    ```powershell
    cd "<Trading>\bot b"; npm install
    cd "..\bot c"; npm install
-   cd "..\crypto"; npm install
+   cd "..\backtest"; npm install     # only if you'll run backtests
    ```
 
 4. **Smoke-test before scheduling:**
    ```powershell
-   cd "<Trading>\crypto"
-   & "C:\Program Files\nodejs\node.exe" bot.js --check-auth   # Coinbase, expect 200
-   & "C:\Program Files\nodejs\node.exe" bot.js --test-sms     # should send a Telegram alert
-   cd "..\bot b"
-   & "C:\Program Files\nodejs\node.exe" scan.js               # writes watchlist.csv
+   cd "<Trading>\bot b"
+   & "C:\Program Files\nodejs\node.exe" stockbot.js            # expect "market closed" out of hours
+   & "C:\Program Files\nodejs\node.exe" scan.js                # writes watchlist.csv
+   & "C:\Program Files\nodejs\node.exe" -e "import('./notify.js').then(m=>m.sendSms('test'))"
    ```
-   (Coinbase has an IP allowlist. Same home network = same public IP = no change.
-   New network → allowlist the new egress IP in the Coinbase developer portal.)
 
-5. **Register the 6 scheduled tasks + power settings.** In an **elevated**
+5. **Register the 5 scheduled tasks + power settings.** In an **elevated**
    PowerShell, from this folder:
    ```powershell
    Set-ExecutionPolicy -Scope Process Bypass -Force
    .\setup-laptop.ps1
    ```
-   This creates: `ClaudeTradingBot-Paper` (crypto, daily noon), and for each of
-   B/C an `ORB-Scan-*` (weekdays 9:00) + `ORB-Bot-*` (weekdays 9:30, repeat every
-   5 min for 6h30m), plus `KeepAwake-MarketHours`. All run as the current user
-   via S4U (logged on or off), with wake-from-sleep on AC enabled. It also
-   unregisters the retired `ORB-Scan` / `ORB-Bot` (Bot A) and `ORB-*-D` tasks.
+   This creates, for each of B/C, an `ORB-Scan-*` (weekdays 9:00) + `ORB-Bot-*`
+   (weekdays 9:30, repeat every 5 min for 6h30m), plus `KeepAwake-MarketHours`.
+   All run as the current user via S4U (logged on or off), with wake-from-sleep
+   on AC enabled. It also unregisters the retired `ORB-Scan` / `ORB-Bot` (Bot A),
+   `ORB-*-D` and `ClaudeTradingBot-Paper` (crypto) tasks.
 
 6. **Laptop power:** keep it on AC. Wake-from-sleep timers only work on AC, and a
    *powered-off* machine never runs. The script sets "do nothing on lid close
@@ -68,8 +68,8 @@ scheduled tasks and power settings are machine-specific and must be recreated.
 7. **⚠️ On the OLD PC, disable every task** so both machines don't run the same
    bots against the same paper accounts / state files:
    ```powershell
-   foreach ($t in 'ClaudeTradingBot-Paper','ORB-Scan-B','ORB-Bot-B','ORB-Scan-C','ORB-Bot-C','KeepAwake-MarketHours',
-                  'ORB-Scan','ORB-Bot','ORB-Scan-D','ORB-Bot-D') {   # last four are retired
+   foreach ($t in 'ORB-Scan-B','ORB-Bot-B','ORB-Scan-C','ORB-Bot-C','KeepAwake-MarketHours',
+                  'ORB-Scan','ORB-Bot','ORB-Scan-D','ORB-Bot-D','ClaudeTradingBot-Paper') {   # last five are retired
        schtasks /change /tn $t /disable 2>$null
    }
    ```
@@ -82,8 +82,7 @@ Get-ScheduledTask | Where TaskName -like '*ORB*' | ft TaskName,State
 Then watch `bot b\stockbot.log` on the next weekday open.
 
 ## Notes / gotchas
-- Live order paths are **latched off** (paper only). Live crypto also needs the
-  portfolio funded — it isn't.
+- Live order paths are **latched off** (paper only).
 - Free Alpaca data is ~15 min delayed.
 - If `Trading` is under OneDrive, the script pins the bot folders always-local.
 - `bot b` and `bot c` share code (`alpaca.js`, `scan.js`, `stockbot.js`,

@@ -1,5 +1,14 @@
 # 1D Strategy Stress-Test (BTC/ETH/SOL spot, long-only)
 
+> **Historical — crypto trading was retired 2026-07-28** (see
+> `../../archive/crypto-donchian/`). This file is kept because it is the evidence
+> behind that decision and because `trend-ma`, `donchian`, `htf-rsi`, `pullback`
+> and `meanrev` still live here for stock backtests. Every number below was
+> measured on **crypto** at a 0.6%/side fee. Do not carry these conclusions over
+> to equities unchanged — stocks are ~commission-free, so the fee-sensitivity
+> section in particular does not transfer. Re-run with `SYMBOL=SPY` before
+> trusting any of these strategies on stocks.
+
 Engine note: returns are ADDITIVE per-trade % on fixed $100 notional (not compounded).
 NET already includes fees. Data: BTC 1D 2020-09 to 2026-06; backtests use most-recent 1500 bars (~from 2022-04).
 

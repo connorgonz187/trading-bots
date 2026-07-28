@@ -1,21 +1,26 @@
 /**
  * Run one strategy module against cached/historical data.
- *   node bt.js strategies/meanrev.js 1H 120
- *   node bt.js strategies/myidea.js 6H 365
- *   node bt.js strategies/myidea.js 1D 365 365   # out-of-sample: 365d ending 365d ago
+ *   node bt.js strategies/orb.js 5m 60
+ *   node bt.js strategies/trend-ma.js 1D 365
+ *   node bt.js strategies/trend-ma.js 1D 365 365  # out-of-sample: 365d ending 365d ago
  *
  * args: <strategyFile> <timeframe> <days> [skipRecentDays]
  *   skipRecentDays lets you backtest an earlier window for out-of-sample checks.
+ *
+ * Set SYMBOL to pick the instrument; it defaults to SPY. Symbols containing a
+ * dash (BTC-USD) route to Coinbase's public candle API — that path is legacy,
+ * kept only so old cached series still load. Crypto trading was retired
+ * 2026-07-28; see archive/crypto-donchian/.
  */
 import { loadCandles, runBacktest } from "./engine.js";
 import { loadStockCandles } from "./alpaca-data.js";
 
-const stratFile = process.argv[2] || "strategies/meanrev.js";
-const tf = process.argv[3] || process.env.TIMEFRAME || "1H";
+const stratFile = process.argv[2] || "strategies/orb.js";
+const tf = process.argv[3] || process.env.TIMEFRAME || "5m";
 const days = Number(process.argv[4] || "120");
 const skipRecent = Number(process.argv[5] || "0");
-const symbol = process.env.SYMBOL || "BTC-USD";
-// Stocks (e.g. SPY) have no dash; crypto pairs do (BTC-USD). Stocks are
+const symbol = process.env.SYMBOL || "SPY";
+// Stocks (e.g. SPY) have no dash; pairs do (BTC-USD). Stocks are
 // commission-free, so default the backtest fee to ~0 (just slippage).
 const isStock = !symbol.includes("-");
 const feePct = Number(

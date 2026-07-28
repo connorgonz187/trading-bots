@@ -4,8 +4,7 @@ Two live **paper-trading** experiments plus a backtesting toolkit and a local
 read-only dashboard. Nothing here has ever placed a live order, and the live
 paths are latched off by design.
 
-> **Status: PAPER.** Alpaca points at `paper-api.alpaca.markets`; the Coinbase
-> live path requires `COINBASE_LIVE_CONFIRM` and is blank. See
+> **Status: PAPER.** Alpaca points at `paper-api.alpaca.markets`. See
 > [Going live](#going-live).
 
 ---
@@ -16,9 +15,10 @@ paths are latched off by design.
 |---|---|
 | `bot b/` | Alpaca ORB — long **+** short, ATR trailing exit (`PA3ZJ1EX28BW`) |
 | `bot c/` | Alpaca ORB — short-only, fixed 2R bracket (`PA3ZMXLQJZXX`) |
-| `crypto/` | Coinbase Advanced donchian 55/20 daily + the backtesting toolkit |
+| `backtest/` | Offline strategy research — engine, strategies, candle cache |
 | `dashboard/` | Local read-only monitor (`node dashboard/server.js` → :4000) |
 | `archive/bot-a-orb/` | Retired Bot A (long-only ORB) — code and full trade history |
+| `archive/crypto-donchian/` | Retired Coinbase donchian bot — code and decision log |
 
 `bot b` and `bot c` are **runtime clones of identical code**. Only `.env`
 differs. If you edit shared logic (`stockbot.js`, `alpaca.js`, `scan.js`,
@@ -37,7 +37,7 @@ reconstructed from **Alpaca fill records** and reconciled against account equity
 | ~~A~~ | ORB long-only, fixed 2R | 83 | 36.1% | 0.56 | **−$752.19** |
 | B | ORB long+short, ATR trail | 150 | 38.0% | 0.96 | −$52.84 |
 | C | ORB short-only, fixed 2R | 80 | 55.0% | 0.98 | −$36.42 |
-| Crypto | Donchian 55/20 daily | 0 | — | — | $0.00 |
+| ~~Crypto~~ | Donchian 55/20 daily | 0 | — | — | $0.00 |
 
 **Bot A was retired 2026-07-28** — see [POSTMORTEM-BOT-A.md](POSTMORTEM-BOT-A.md).
 Short summary: it needed a 50.8% win rate to break even and delivered 36.1%,
@@ -47,13 +47,17 @@ because the 2R target filled on 2.5% of trades while the stop filled on 39.2%.
 synthesis, but it never traded (placeholder API keys) and the comparison that
 justified it came from a P&L pairing bug, not from the market.
 
+**The crypto bot was retired 2026-07-28** — see
+[archive/crypto-donchian/](archive/crypto-donchian/). It took zero trades in 48
+daily decisions. That was *correct* behaviour rather than a fault — donchian
+55/20 is meant to trade rarely and BTC never broke its 55-day high — but two
+months that generate no sample also generate no information, so the route was
+dropped rather than tuned. The backtesting toolkit it shared a folder with
+survives at `backtest/`.
+
 **B vs C is genuinely open.** Both are within $55 of flat. Bot B's internal
 split is the most useful signal so far — long sleeve −$270 (PF 0.67) vs short
 sleeve +$217 (PF 1.31), perfectly matched on data, timing and regime.
-
-The crypto bot has taken zero trades in 48 daily decisions. That is correct
-behaviour — donchian 55/20 is meant to trade rarely, and BTC never broke its
-55-day high in the window.
 
 ---
 
@@ -81,7 +85,7 @@ node dashboard/server.js     # then open http://localhost:4000
 ## Setup
 
 1. **Node 18+** at `C:\Program Files\nodejs\` (the `run-*.cmd` launchers hardcode it).
-2. `npm install` inside `bot b`, `bot c`, and `crypto`.
+2. `npm install` inside `bot b` and `bot c` (and `backtest` if you'll use it).
 3. Copy `.env.example` → `.env` in each folder and fill it in. Every variable the
    code reads is documented there. `.env` is gitignored.
 4. Set the machine timezone to **US Eastern** — scheduled tasks fire in local
@@ -91,8 +95,8 @@ node dashboard/server.js     # then open http://localhost:4000
    Set-ExecutionPolicy -Scope Process Bypass -Force
    .\setup-laptop.ps1
    ```
-   This registers 6 tasks (crypto daily at noon; scan + bot for B and C on
-   weekdays) and removes the retired Bot A / Bot D tasks.
+   This registers 5 tasks (scan + bot for B and C on weekdays, plus the
+   keep-awake guardian) and removes the retired Bot A, Bot D and crypto tasks.
 
 Full machine-migration notes are in [MIGRATION.md](MIGRATION.md).
 
@@ -130,48 +134,26 @@ Safeguards, all env-tunable and on by default:
 
 ---
 
-## The crypto bot
-
-`crypto/bot.js` pulls daily candles from Coinbase, runs the strategy named by
-`STRATEGY` (default `strategies/donchian.js`), and tracks the one position it
-opened in `position.json`. It **only ever sells what it itself bought.**
+## Backtesting
 
 ```powershell
-cd crypto
-node bot.js --check-auth     # read-only; proves keys + IP allowlist
-node bot.js                  # one decision cycle (paper)
-node bot.js --tax-summary    # totals from trades.csv
+cd backtest
+node bt.js strategies/orb.js 5m 60             # default SYMBOL=SPY
+node bt.js strategies/trend-ma.js 1D 365 365   # out-of-sample window
+node sweep.js                                  # parameter grid
 ```
 
-Donchian: enter when the daily close breaks the highest high of the prior 55
-days; exit below the prior 20-day low or an ATR(20)×3 stop.
-
-### Backtesting
-
-```powershell
-cd crypto
-node bt.js 90 BTC-USD 1D     # pluggable engine: days, symbol, timeframe
-node bt.js 60 SPY 5Min       # stock symbols auto-route to Alpaca data
-node sweep.js                # parameter sweep
-```
-
-`strategies/_validation.md` is the honest write-up of what the backtests found —
-including that every sub-window rests on 0–5 trades and none of it clears a high
-bar on sample size. Donchian is the default because it was the most *robust*,
-not the most impressive.
+See [backtest/README.md](backtest/README.md). Before trusting any result, read
+`backtest/strategies/_validation.md` — every sub-window in it rests on 0–5
+trades, and it was all measured on crypto at crypto fees.
 
 ---
 
 ## Going live
 
-Deliberately disabled. Before changing anything: pass `--check-auth`, watch
-paper for weeks, then test on a tiny sub-account.
+Deliberately disabled. Repoint `APCA_BASE_URL` only after the paper test
+convinces you — on the evidence so far, it should not.
 
-- **Crypto:** requires `PAPER_TRADING=false` **and**
-  `COINBASE_LIVE_CONFIRM=I_UNDERSTAND`. The bracket order field semantics follow
-  Coinbase's docs but are **unverified against a live fill**.
-- **Stocks:** repoint `APCA_BASE_URL` only after the paper test convinces you.
-  On the evidence so far, it should not.
-
-**This is not financial advice.** Nothing here is proven profitable. Two of
-three strategies are flat-to-negative and the third was retired for losing money.
+**This is not financial advice.** Nothing here is proven profitable. Both
+surviving strategies are flat-to-negative; the other two were retired, one for
+losing money and one for producing no evidence at all.

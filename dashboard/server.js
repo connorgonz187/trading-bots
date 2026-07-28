@@ -6,8 +6,7 @@
  * equity / positions / orders, then serves an auto-refreshing browser page.
  *
  * It NEVER places, cancels, or modifies an order. Every Alpaca call here is a
- * GET. The crypto side is paper-only in the bots, so its live state comes from
- * position.json + a public (unauthenticated) BTC spot price.
+ * GET.
  *
  *   node dashboard/server.js          → http://localhost:4000
  *   PORT=4100 node dashboard/server.js
@@ -28,7 +27,9 @@ const ALPACA_BASE =
 // data lives in archive/bot-a-orb/ and is deliberately NOT shown here: this is a
 // live monitor, and a retired strategy's flat account is noise. Bot D was removed
 // (it never traded — placeholder keys — and its premise came from the CSV
-// pairing bug that realizedForBot() above now fixes).
+// pairing bug that realizedForBot() above now fixes). The Coinbase donchian bot
+// was retired 2026-07-28 too — archive/crypto-donchian/ — so this dashboard is
+// now Alpaca-only.
 const BOTS = [
   {
     id: "b",
@@ -36,7 +37,6 @@ const BOTS = [
     dir: "bot b",
     account: "PA3ZJ1EX28BW",
     flavor: "ORB long + short + trailing",
-    hasCrypto: false,
     defaultSide: null, // mixed — rely on the Side column
     startingEquity: 100000,
   },
@@ -46,19 +46,8 @@ const BOTS = [
     dir: "bot c",
     account: "PA3ZMXLQJZXX",
     flavor: "ORB short-only",
-    hasCrypto: false,
     defaultSide: "short",
     startingEquity: 100000,
-  },
-  {
-    id: "crypto",
-    label: "Crypto",
-    dir: "crypto",
-    account: null,
-    flavor: "Coinbase donchian 55/20 (daily)",
-    hasCrypto: true,
-    defaultSide: null,
-    noAlpaca: true, // Coinbase-only; the .env's Alpaca keys are just for backtest data
   },
 ];
 
@@ -173,16 +162,15 @@ async function fetchJson(url, opts = {}, timeoutMs = 8000) {
 }
 
 // ── per-bot Alpaca (live, read-only) ─────────────────────────────────────────
-// A stub that keeps the shape the frontend expects, so a non-Alpaca panel (the
-// crypto bot) renders as "n/a" instead of throwing on undefined arrays.
+// A stub that keeps the shape the frontend expects, so a bot whose keys are
+// missing renders as "n/a" instead of throwing on undefined arrays.
 const NO_ALPACA = (why) => ({
   ok: false, error: why, equity: null, lastEquity: null, cash: null,
   buyingPower: null, status: null, dayPL: null, dayPLpct: null,
   history: null, monthPL: null, positions: [], orders: [],
 });
 
-async function alpacaForBot(env, bot) {
-  if (bot && bot.noAlpaca) return NO_ALPACA("Coinbase bot — no Alpaca account");
+async function alpacaForBot(env) {
   const id = env.APCA_API_KEY_ID;
   const secret = env.APCA_API_SECRET_KEY;
   if (!id || !secret) return NO_ALPACA("no API keys in .env");
@@ -263,22 +251,6 @@ async function alpacaForBot(env, bot) {
   } catch (e) {
     return { ok: false, error: String(e.message || e) };
   }
-}
-
-let btcCache = { ts: 0, price: null };
-async function btcSpot() {
-  if (Date.now() - btcCache.ts < 20000) return btcCache.price;
-  try {
-    const j = await fetchJson(
-      "https://api.coinbase.com/v2/prices/BTC-USD/spot",
-      {},
-      5000,
-    );
-    btcCache = { ts: Date.now(), price: num(j?.data?.amount) };
-  } catch {
-    /* keep stale */
-  }
-  return btcCache.price;
 }
 
 // Pair ENTRY→EXIT rows in stock-trades.csv into closed round-trips and tally
@@ -379,9 +351,8 @@ function localForBot(bot) {
   const d = join(ROOT, bot.dir);
   const today = etDate();
 
-  // health: freshness of the stock-bot tick and (for A) the crypto run
+  // health: freshness of the stock-bot tick and the pre-market scan
   const stockLog = fileAge(join(d, "stockbot.log"));
-  const cryptoLog = fileAge(join(d, "bot.log"));
   const scanLog = fileAge(join(d, "scan.log"));
 
   // today's stock trades + all-time realized P&L / win rate
@@ -390,13 +361,6 @@ function localForBot(bot) {
   );
   const stockToday = stockTrades.filter((r) => r.Date === today);
   const realized = realizedForBot(stockTrades, bot.defaultSide);
-
-  // crypto (paper) state + recent decisions
-  const position = readJson(join(d, "position.json"), {});
-  const cryptoTrades = readCsvObjects(join(d, "trades.csv"));
-  const safety = readJson(join(d, "safety-check-log.json"), { trades: [] });
-  const lastDecision =
-    (safety.trades || []).slice(-1)[0] || null;
 
   // watchlist — keep only the most recent date present
   const wl = readCsvObjects(join(d, "watchlist.csv")).filter(
@@ -412,17 +376,11 @@ function localForBot(bot) {
   return {
     health: {
       stockTickAgeMin: stockLog?.ageMin ?? null,
-      cryptoRunAgeMin: cryptoLog?.ageMin ?? null,
       scanAgeMin: scanLog?.ageMin ?? null,
     },
     stockToday,
     realized,
     stockTradesRecent: stockTrades.slice(-8).reverse(),
-    crypto: {
-      position,
-      lastDecision,
-      tradesRecent: cryptoTrades.slice(-5).reverse(),
-    },
     watchlist,
   };
 }
@@ -434,13 +392,13 @@ async function buildState() {
     return stateCache.data;
 
   let clock = null;
-  // use bot A's keys for the shared market clock
-  const envA = parseEnv(BOTS[0].dir);
-  if (envA.APCA_API_KEY_ID) {
+  // any bot's keys will do for the shared market clock
+  const env0 = parseEnv(BOTS[0].dir);
+  if (env0.APCA_API_KEY_ID) {
     clock = await fetchJson(`${ALPACA_BASE}/v2/clock`, {
       headers: {
-        "APCA-API-KEY-ID": envA.APCA_API_KEY_ID,
-        "APCA-API-SECRET-KEY": envA.APCA_API_SECRET_KEY,
+        "APCA-API-KEY-ID": env0.APCA_API_KEY_ID,
+        "APCA-API-SECRET-KEY": env0.APCA_API_SECRET_KEY,
       },
     }).catch(() => null);
   }
@@ -448,10 +406,7 @@ async function buildState() {
   const bots = await Promise.all(
     BOTS.map(async (bot) => {
       const env = parseEnv(bot.dir);
-      const [alpaca, btc] = await Promise.all([
-        alpacaForBot(env, bot),
-        bot.hasCrypto ? btcSpot() : Promise.resolve(null),
-      ]);
+      const alpaca = await alpacaForBot(env);
       // The one number that cannot drift: broker equity minus what the account
       // started with. `realized` below is reconstructed from our own CSV and is
       // only as good as the trade log (a missed flatten leaves an entry unpaired
@@ -465,14 +420,13 @@ async function buildState() {
         ...bot,
         paper: env.PAPER_TRADING === "true",
         alpaca,
-        btcPrice: btc,
         netSinceStart,
         ...localForBot(bot),
       };
     }),
   );
 
-  // combined roll-up across the three accounts
+  // combined roll-up across the accounts
   const eq = bots.filter((b) => b.alpaca.ok && b.alpaca.equity != null);
   const combined = {
     equity: eq.reduce((s, b) => s + b.alpaca.equity, 0),
@@ -482,7 +436,7 @@ async function buildState() {
       0,
     ),
     accountsReporting: eq.length,
-    accountsTotal: bots.filter((b) => !b.noAlpaca).length,
+    accountsTotal: bots.length,
   };
   combined.dayPLpct =
     combined.equity - combined.dayPL > 0

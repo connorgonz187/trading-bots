@@ -599,27 +599,6 @@
         }).join("") + "</div>";
       }
 
-      function cryptoBlock(bot) {
-        const c = bot.crypto;
-        const pos = c.position && c.position.open ? c.position : null;
-        const d = c.lastDecision;
-        const posHtml = pos
-          ? `<div class="panel-box">OPEN ${esc(pos.symbol || "BTC")} · entry ${fmtUsd(pos.entry)} · size ${esc(pos.size ?? "")}</div>`
-          : '<div class="empty">Flat — no open crypto position</div>';
-        const decHtml = d
-          ? `<div class="panel-box" style="margin-top:8px">
-              <b style="color:var(--ink)">${esc(d.symbol)}</b> · ${esc(d.strategy || "")}<br>
-              <span class="muted">${new Date(d.timestamp).toLocaleString()}</span> ·
-              ${d.orderPlaced ? '<span class="pos">ORDER PLACED</span>' : '<span class="muted">' + esc(d.blockedReason || "no signal") + "</span>"}
-              ${d.nearMiss ? ' · <span style="color:var(--amber)">NEAR MISS</span>' : ""}
-            </div>` : "";
-        const price = bot.btcPrice ? `<span class="meta">BTC ${fmtUsd(bot.btcPrice)}</span>` : "";
-        return `<section class="block">
-          <div class="lbl">Crypto · Donchian ${price}</div>
-          ${posHtml}${decHtml}
-        </section>`;
-      }
-
       function botCard(bot, clock, i, boot) {
         const a = bot.alpaca;
         const hp = healthPill(bot, clock);
@@ -661,7 +640,6 @@
             <div class="lbl">Watchlist <span class="count">${bot.watchlist.length}</span><span class="meta">scan ${ageLabel(bot.health.scanAgeMin)}</span></div>
             ${watchlistChips(bot.watchlist)}
           </section>
-          ${bot.hasCrypto ? cryptoBlock(bot) : ""}
         </div>`;
       }
 

@@ -1,12 +1,16 @@
 # Tradex — local trading dashboard
 
-A single laptop dashboard for the three paper-trading bots. **Read-only** — it
-only ever issues `GET` requests to Alpaca and reads files on disk. It cannot
-place, cancel, or modify an order.
+A single laptop dashboard for the paper-trading bots. **Read-only** — it only
+ever issues `GET` requests to Alpaca and reads files on disk. It cannot place,
+cancel, or modify an order.
+
+Bots B and C are the two it tracks. Bot A, Bot D and the Coinbase crypto bot are
+retired and deliberately absent — this is a live monitor, and a retired
+strategy's frozen account is noise. Their history lives under `archive/`.
 
 ## What it shows
 
-A header roll-up (combined equity across all three Alpaca paper accounts with a
+A header roll-up (combined equity across the Alpaca paper accounts with a
 30-day equity curve, day P&L, total open positions, market clock) and one card
 per bot:
 
@@ -18,12 +22,12 @@ per bot:
 - **Performance** — realized P&L, win rate, and 30-day P&L. Realized P&L and win
   rate are computed by pairing ENTRY→EXIT round-trips in `stock-trades.csv`
   (respects the `Side` column when present; falls back to each bot's configured
-  side for legacy rows — A=long, C=short).
+  side for legacy rows — C=short). Shown alongside **Net (broker)**, which is
+  equity minus starting capital and cannot drift; when the two disagree, the
+  broker figure is the true one.
 - **Open positions** — live, with unrealized P&L per position.
 - **Today's trades** — entries/exits parsed from `stock-trades.csv`.
 - **Watchlist** — the latest pre-market scan from `watchlist.csv`.
-- **Crypto** (Bot A only) — paper donchian position from `position.json` plus
-  the last decision from `safety-check-log.json`, with the live BTC spot price.
 
 Top-right **Fullscreen** button toggles a borderless full-screen view.
 
@@ -46,9 +50,8 @@ The page auto-refreshes every 10 s. Use a different port with
   `APCA_API_KEY_ID` / `APCA_API_SECRET_KEY` from its `.env` and calls
   `/v2/account`, `/v2/positions`, `/v2/orders`, `/v2/clock`. Each account is
   independent, so one set of bad keys only greys out that one card.
-- **Local files:** `stock-trades.csv`, `watchlist.csv`, `position.json`,
-  `safety-check-log.json`, and the `*.log` mtimes for the health pill.
-- **BTC spot:** the public, unauthenticated Coinbase price endpoint (no key).
+- **Local files:** `stock-trades.csv`, `watchlist.csv`, and the `*.log` mtimes
+  for the health pill.
 
 No dependencies — pure Node (needs Node 18+ for global `fetch`; you have v24).
 

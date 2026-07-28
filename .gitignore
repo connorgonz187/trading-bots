@@ -13,14 +13,16 @@ alpacarecovery.txt
 # ── Dependencies ────────────────────────────────────────────────────────
 node_modules/
 
-# ── Upstream clones, renamed out of the way pending deletion ────────────
-# bot b/ and bot c/ were clones of the third-party repo this started from.
-.git.upstream-backup/
+# ── Claude Code worktrees — separate checkouts, not part of this tree ───
+.claude/worktrees/
 
 # ── Runtime state — rewritten every cycle, meaningless in history ───────
+# Archived bots are frozen, so their final state IS evidence — keep those.
 position.json
 stock-state*.json
 safety-check-log.json
+!archive/**/position.json
+!archive/**/safety-check-log.json
 .bar-cache/
 
 # ── Logs ────────────────────────────────────────────────────────────────
@@ -30,7 +32,7 @@ safety-check-log.json
 !archive/**/*.log
 
 # ── Cached historical candles — large and re-downloadable ───────────────
-crypto/data/
+backtest/data/
 
 # ── OS noise ────────────────────────────────────────────────────────────
 Thumbs.db
