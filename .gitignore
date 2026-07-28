@@ -20,6 +20,10 @@ node_modules/
 # Archived bots are frozen, so their final state IS evidence — keep those.
 position.json
 stock-state*.json
+# The day's direction call. Rewritten every morning; regime-history.csv is the
+# durable record and IS committed, because it's the evidence the stance can be
+# judged against later.
+regime.json
 safety-check-log.json
 !archive/**/position.json
 !archive/**/safety-check-log.json

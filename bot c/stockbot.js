@@ -15,6 +15,12 @@
  *
  * RISK CONTROLS (all env-tunable, on by default):
  *   ORB_REGIME=true       only take longs when SPY≥VWAP, shorts when SPY≤VWAP.
+ *   ORB_NEWS_REGIME=true  honour ../regime.json, the DAY-level direction stance
+ *                         written pre-market by regime.js from news + macro data.
+ *                         It only ever NARROWS ORB_LONGS/ORB_SHORTS, never widens
+ *                         them, and is ignored unless its date is today (ET).
+ *                         Set false to pin an account to its static flags.
+ *   ORB_REGIME_FILE       path to that file (default ../regime.json).
  *   ORB_MAX_POSITIONS     cap concurrent open positions (default 4).
  *   ORB_MAX_PER_SECTOR    cap positions in one correlated cluster (default 2).
  *   ORB_MAX_DAILY_LOSS    halt new entries once realized P/L ≤ −this (default 150).
@@ -74,6 +80,7 @@ import {
   getAsset,
 } from "./alpaca.js";
 import { sessionVWAP } from "./strategy.js";
+import { loadDayStance } from "./regime-gate.js";
 import { sendSms } from "./notify.js";
 
 const OR_MIN = parseInt(process.env.ORB_MINUTES || "15", 10);
@@ -88,6 +95,15 @@ const MAX_NOTIONAL_PCT = parseFloat(process.env.STOCK_MAX_NOTIONAL_PCT || "7") /
 const SHORTS = /^(1|true|yes|on)$/i.test(process.env.ORB_SHORTS || "");
 const TRAILING = /^(1|true|yes|on)$/i.test(process.env.ORB_TRAILING || "");
 const LONGS = !/^(0|false|no|off)$/i.test(process.env.ORB_LONGS || "true"); // default on
+
+// ── Daily news/macro regime (written pre-market by regime.js) ──
+// This is the DAY-level direction gate; the SPY-vs-VWAP check further down is
+// the INTRADAY one. They stack: a break must satisfy both. Critically, the file
+// can only ever NARROW what ORB_LONGS/ORB_SHORTS already allow — same rule as
+// the notional caps, where the smaller of the two wins. A "long_only" day
+// cannot turn short-only account C into a long bot; C simply stands down.
+const NEWS_REGIME = !/^(0|false|no|off)$/i.test(process.env.ORB_NEWS_REGIME || "true");
+const NEWS_REGIME_FILE = process.env.ORB_REGIME_FILE || "../regime.json";
 
 // ── Risk controls (on by default; tune or disable via env) ──
 const REGIME = !/^(0|false|no|off)$/i.test(process.env.ORB_REGIME || "true");
@@ -235,7 +251,7 @@ async function main() {
   const now = et(Date.now());
   const clock = await getClock();
   console.log(
-    `[${now.date} ${hhmm(now.min)} ET] ${TAG} market ${clock.is_open ? "OPEN" : "closed"} | shorts=${SHORTS} trailing=${TRAILING} regime=${REGIME}`,
+    `[${now.date} ${hhmm(now.min)} ET] ${TAG} market ${clock.is_open ? "OPEN" : "closed"} | shorts=${SHORTS} trailing=${TRAILING} regime=${REGIME} newsRegime=${NEWS_REGIME}`,
   );
 
   let state = loadState();
@@ -420,6 +436,16 @@ async function main() {
     }
   }
 
+  // Day-level direction gate from regime.js. Combined with the env flags here,
+  // once, so every downstream check reads a single pair of booleans.
+  const day = loadDayStance(now.date, { enabled: NEWS_REGIME, file: NEWS_REGIME_FILE });
+  const canLong = LONGS && day.allowLong;
+  const canShort = SHORTS && day.allowShort;
+  console.log(`  news regime: ${day.label} -> longs=${canLong} shorts=${canShort}`);
+  if (!canLong && !canShort) {
+    console.log("  no direction permitted today — managing existing positions only.");
+  }
+
   // Current exposure for the position/sector caps (positions = today's holds).
   // secDir tracks each sector's ECONOMIC direction so we never pair a position
   // with its own hedge (e.g. long SOXL + long SOXS = a self-cancelling decay
@@ -464,18 +490,24 @@ async function main() {
       const okShort = inv ? regime !== "bear" : regime !== "bull";
       let side = null;
       let stop = null;
-      if (LONGS && price > orHigh && okLong) {
+      if (canLong && price > orHigh && okLong) {
         side = "long";
         stop = orLow;
-      } else if (SHORTS && price < orLow && okShort) {
+      } else if (canShort && price < orLow && okShort) {
         side = "short";
         stop = orHigh;
       }
       if (!side) {
-        if (LONGS && price > orHigh && !okLong)
+        if (canLong && price > orHigh && !okLong)
           console.log(`  ${sym}: long break vetoed by ${regime} regime${inv ? " (inverse ETF)" : ""}`);
-        if (SHORTS && price < orLow && !okShort)
+        if (canShort && price < orLow && !okShort)
           console.log(`  ${sym}: short break vetoed by ${regime} regime${inv ? " (inverse ETF)" : ""}`);
+        // Separate message from the VWAP veto above: "the day says no" and "the
+        // tape says no right now" are different failures and get debugged differently.
+        if (LONGS && !day.allowLong && price > orHigh)
+          console.log(`  ${sym}: long break vetoed by day stance (${day.label})`);
+        if (SHORTS && !day.allowShort && price < orLow)
+          console.log(`  ${sym}: short break vetoed by day stance (${day.label})`);
         continue;
       }
 

@@ -16,6 +16,7 @@ placed a live order, and the live paths are latched off by design.
 | `bot b/` | Alpaca ORB — long **+** short, ATR trailing exit (`PA3ZJ1EX28BW`) |
 | `bot c/` | Alpaca ORB — short-only, fixed 2R bracket (`PA3ZMXLQJZXX`) |
 | `swing/` | **Bot E** — multi-day swing, 2% stop / 5% target, holds overnight (`PA3RN0YU53QN`) |
+| `regime.js` | Pre-market **direction call** — writes `regime.json`, read by B and C |
 | `backtest/` | Offline strategy research — engine, strategies, candle cache |
 | `dashboard/` | Local read-only monitor (`node dashboard/server.js` → :4000) |
 | `archive/bot-a-orb/` | Retired Bot A (long-only ORB) — code and full trade history |
@@ -147,6 +148,9 @@ Safeguards, all env-tunable and on by default:
   run).
 - **Regime filter** — longs only when SPY ≥ session VWAP, shorts only when ≤.
   Inverse ETFs are evaluated on economic direction, not order side.
+- **Daily direction stance** — `regime.json`, written pre-market by `regime.js`.
+  See [Direction](#direction--the-daily-regime-call) below. Disable per account
+  with `ORB_NEWS_REGIME=false`.
 - **Correlation caps** — `ORB_MAX_PER_SECTOR` stops SOXL + MRVL + INTC counting
   as three bets when they are one semis bet, and blocks opening a position that
   economically opposes what is already held in that cluster.
@@ -160,6 +164,90 @@ Safeguards, all env-tunable and on by default:
 - **Short-refusal latching** — a broker "cannot be sold short" is cached for the
   day instead of being retried every 5 minutes (SQQQ was re-rejected 99 times in
   one account before this).
+
+---
+
+## Direction — the daily regime call
+
+Until now each account's direction was a constant: B long+short forever, C
+short-only forever. That ignores the tape, and the forward test's clearest
+signal was that side selection mattered more than the entry rule — B's short
+sleeve made +$217 (PF 1.31) while its long sleeve lost $270 (PF 0.67) on
+identical data, timing and regime.
+
+`regime.js` runs at **8:55** (task `ORB-Regime`, one shared task — the stance is
+a property of the market, not of an account, so B and C must read the same file
+or their comparison stops meaning anything). It writes `regime.json`:
+
+```json
+{ "date": "2026-07-28", "stance": "short_only", "source": "auto", "score": -3,
+  "components": { "news": -2, "trend": -1.5, "vol": 0, "oil": 0.5 } }
+```
+
+Stances are `both`, `long_only`, `short_only`, `flat`. Four inputs, all from
+Alpaca, all headless:
+
+| Component | Input | Weight |
+|---|---|---|
+| `news` | risk-off vs risk-on keyword tone across macro headlines (18h) | ±3 |
+| `trend` | SPY close vs its 20-day SMA | ±1.5 |
+| `vol` | VIXY vs its 10-day SMA (>+10% = risk-off) | −1.5 / +0.5 |
+| `oil` | USO 5-day change (>+5% = risk-off) | −1 / +0.5 |
+
+`score ≥ +2 → long_only`, `≤ −2 → short_only`, else `both`. Auto mode never
+emits `flat`; standing the bots down entirely has no validated threshold behind
+it, so it is override-only.
+
+**The news filter is the load-bearing part.** Alpaca's feed is Benzinga, ~95%
+single-name earnings and analyst actions. Scoring it raw was garbage — the first
+live run read "Whistleblower Retaliation Case" as a geopolitical hit and "UBS
+Upgrades Medtronic" as relief. Only headlines with no ticker, five or more
+tickers, or an index/macro ticker vote, and analyst/earnings boilerplate is
+dropped outright. That cut a 200-headline sample to the 20 that were actually
+macro.
+
+Two rules the bots enforce on top:
+
+- **It can only narrow, never widen** — the same "smaller of the two wins" rule
+  as the notional caps. `long_only` cannot make short-only account C take a
+  long; C just stands down that day. Note that this *does* change what C tests:
+  it is no longer short-every-day. Set `ORB_NEWS_REGIME=false` on C to keep the
+  original clean comparison running.
+- **It fails open** — a missing, malformed or stale file (date ≠ today, ET)
+  leaves the env flags untouched. A scheduler hiccup at 8:55 must not silently
+  stand an account down. `node selftest-regime.js` in either bot folder covers
+  all of this; 29 assertions, no network.
+
+### Overriding it
+
+`regime.js` scores keywords; it cannot read meaning, weigh a scheduled FOMC, or
+notice that a war headline is about a *ceasefire*. The `/premarket-regime` skill
+(`.claude/skills/premarket-regime/`) has Claude read the auto call, search
+overnight macro news, optionally glance at TradingView, and either accept it or
+override:
+
+```powershell
+node regime.js --show      # what's in force now
+node regime.js --dry       # recompute, print, write nothing
+node regime.js --set short_only --why "Iran strikes resumed, Brent +6%, ES -1.4%"
+```
+
+`--why` is mandatory and lands in the history file next to the inputs.
+
+### It has not been validated
+
+The weights and keyword lists are a hypothesis, not a measured edge. **Nothing
+here has been backtested against the bots' fills** — which is exactly how Bot D
+happened. Every run appends its full input vector to `regime-history.csv` so the
+question can be settled with evidence later:
+
+```
+date,computedAt,stance,source,score,news,trend,vol,oil,headlines,macroHeadlines,...
+```
+
+Once there are enough rows, join them to the fill records and ask whether
+`short_only` days actually paid better than `both` days. Until then the stance
+is a prior, not a prediction.
 
 ---
 

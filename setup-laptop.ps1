@@ -95,8 +95,13 @@ foreach ($t in 'ORB-Scan','ORB-Bot','ORB-Scan-D','ORB-Bot-D','ClaudeTradingBot-P
     }
 }
 
-# --- the 5 live tasks --------------------------------------------------------
+# --- the live tasks ----------------------------------------------------------
 Write-Host "`nRegistering tasks..."
+
+# Shared pre-market direction call. ONE task for all accounts: the stance is a
+# property of the market, not of an account, so B and C must read the same file
+# for their comparison to stay meaningful. Runs before the 9:00 scanners.
+Register-BotTask 'ORB-Regime' (Join-Path $Trading 'run-regime.cmd') (New-WeekdayTrigger '8:55am')
 
 # Account B (long+short+trailing)
 Register-BotTask 'ORB-Scan-B' (Join-Path $Trading 'bot b\run-scan.cmd')     (New-WeekdayTrigger '9:00am')
