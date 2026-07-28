@@ -17,7 +17,7 @@
  *   node swing-scan.js --explain  # also print why each name was rejected
  */
 import "dotenv/config";
-import { existsSync, writeFileSync, appendFileSync } from "fs";
+import { existsSync, writeFileSync, readFileSync } from "fs";
 import { mostActives, dailyBarsMulti } from "./alpaca.js";
 import { CFG, WARMUP, passesUniverseGate, indicators } from "./swing-strategy.js";
 
@@ -100,13 +100,23 @@ async function main() {
   passed.sort((a, b) => b.stopAtr - a.stopAtr);
   const final = passed.slice(0, TOP);
 
-  if (!existsSync(FILE))
-    writeFileSync(FILE, "Date,Symbol,Price,ATR%,AvgDollarVolM,StopATRs,Trend\n");
-  for (const r of final)
-    appendFileSync(
-      FILE,
-      `${etDate},${r.sym},${r.price.toFixed(2)},${r.atrPct.toFixed(2)},${r.dollarVolM.toFixed(0)},${r.stopAtr.toFixed(2)},${r.trend}\n`,
-    );
+  // Rewriting today's rows rather than appending makes a re-run idempotent. A
+  // blind append doubles the day's rows whenever the scan runs twice (a manual
+  // run, or a task firing after a missed schedule), which reads as a 48-name
+  // universe when the scan actually chose 24. Prior dates are left untouched.
+  const HEADER = "Date,Symbol,Price,ATR%,AvgDollarVolM,StopATRs,Trend\n";
+  const prior = existsSync(FILE)
+    ? readFileSync(FILE, "utf8")
+        .replace(/\r\n/g, "\n")
+        .split("\n")
+        .slice(1)
+        .filter((l) => l.trim() && !l.startsWith(`${etDate},`))
+    : [];
+  const rows = final.map(
+    (r) =>
+      `${etDate},${r.sym},${r.price.toFixed(2)},${r.atrPct.toFixed(2)},${r.dollarVolM.toFixed(0)},${r.stopAtr.toFixed(2)},${r.trend}`,
+  );
+  writeFileSync(FILE, HEADER + [...prior, ...rows].join("\n") + "\n");
 
   console.log(
     `\nSwing watchlist ${etDate}: ${final.length} of ${syms.length} candidates passed -> ${FILE}`,
