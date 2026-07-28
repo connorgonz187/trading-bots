@@ -112,6 +112,16 @@ Alpaca holds both legs server-side so they fill intrabar. Position size is
 
 Safeguards, all env-tunable and on by default:
 
+- **Concentration cap** — no single position may be worth more than
+  `STOCK_MAX_NOTIONAL_PCT` (default **7**) percent of account **equity**, read
+  live from Alpaca each cycle. Equity, not `buying_power`: the paper accounts
+  carry 4× margin, so sizing off buying power would let "7%" mean 28% of what
+  the account actually owns. This binds together with the fixed
+  `STOCK_MAX_NOTIONAL` and **the smaller of the two wins**, so it can only ever
+  tighten sizing. At ~$100k equity the fixed $2,000 cap is the binding one; the
+  percentage takes over below ~$28.6k. It fails **closed** — if the account
+  can't be read, the cycle takes no new entries (exits and the EOD flatten still
+  run).
 - **Regime filter** — longs only when SPY ≥ session VWAP, shorts only when ≤.
   Inverse ETFs are evaluated on economic direction, not order side.
 - **Correlation caps** — `ORB_MAX_PER_SECTOR` stops SOXL + MRVL + INTC counting
