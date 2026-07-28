@@ -1,0 +1,8 @@
+.env
+*.log
+swing-state.json
+node_modules/
+data/
+
+# swing-trades.csv and swing-watchlist.csv are deliberately NOT ignored — they
+# are the experiment's record, same as bot b/stock-trades.csv.

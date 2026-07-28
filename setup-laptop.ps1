@@ -5,7 +5,7 @@
       Set-ExecutionPolicy -Scope Process Bypass -Force
       .\setup-laptop.ps1
 
-  It registers the 6 Windows scheduled tasks (paper trading) pointed at THIS machine's
+  It registers up to 8 Windows scheduled tasks (paper trading) pointed at THIS machine's
   copy of the bot folders, running as the current user via S4U (no stored password),
   and enables wake-from-sleep on AC power. It also UNREGISTERS the retired tasks.
 
@@ -17,10 +17,13 @@
       ClaudeTradingBot-Paper now points there.
     * Bot D is deleted. It never traded (placeholder API keys) and its premise came
       from a P&L pairing bug rather than a real result.
+    * Bot E (swing/) added. Multi-day holds, so it needs its OWN paper account —
+      B and C sweep any position open at the start of a session and would close
+      its swings. Its two tasks are skipped unless swing\.env has real keys.
 
   PREREQS (do these first — see MIGRATION.md):
     1. Node.js LTS installed at C:\Program Files\nodejs\  (winget install OpenJS.NodeJS.LTS)
-    2. npm install run inside bot b, bot c, crypto
+    2. npm install run inside bot b, bot c, crypto, swing
     3. Timezone set to US Eastern (tasks fire at 9:30 AM = market open, in LOCAL time)
 #>
 
@@ -32,7 +35,7 @@ $Node    = 'C:\Program Files\nodejs\node.exe'
 $User    = "$env:COMPUTERNAME\$env:USERNAME"
 
 if (-not (Test-Path $Node)) { throw "Node not found at $Node. Install Node LTS first." }
-foreach ($b in 'bot b','bot c','crypto') {
+foreach ($b in 'bot b','bot c','crypto','swing') {
     if (-not (Test-Path (Join-Path $Trading $b))) { throw "Missing folder: $b under $Trading" }
 }
 Write-Host "Trading dir : $Trading"
@@ -64,6 +67,20 @@ function New-WeekdayTrigger { param([string]$At)
     New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -At $At
 }
 
+# Bot E manages open positions on a slow cadence and only opens new ones in a
+# 15-minute window late in the session, so it does not need the ORB bots' 5-min
+# tick. Every 30 min from 9:45 covers reconciliation, the stop ratchet and the
+# time stop, and still lands inside the 15:40-15:55 entry window.
+function New-SwingTrigger {
+    param([string]$At)
+    $t = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -At $At
+    $rep = (New-ScheduledTaskTrigger -Once -At $At `
+              -RepetitionInterval (New-TimeSpan -Minutes 30) `
+              -RepetitionDuration (New-TimeSpan -Hours 6 -Minutes 15)).Repetition
+    $t.Repetition = $rep
+    return $t
+}
+
 # --- remove retired tasks ----------------------------------------------------
 # Bot A's ORB and every Bot D task. Safe to run repeatedly; ignores absent tasks.
 Write-Host "Removing retired tasks..."
@@ -88,6 +105,28 @@ Register-BotTask 'ORB-Bot-B'  (Join-Path $Trading 'bot b\run-stockbot.cmd') (New
 # Account C (short-only)
 Register-BotTask 'ORB-Scan-C' (Join-Path $Trading 'bot c\run-scan.cmd')     (New-WeekdayTrigger '9:00am')
 Register-BotTask 'ORB-Bot-C'  (Join-Path $Trading 'bot c\run-stockbot.cmd') (New-IntradayTrigger '9:30am')
+
+# Account E (multi-day swing). Registered ONLY once swing\.env has real keys:
+# Bot E holds overnight, so pointing it at B's or C's account would let their
+# stranded-position sweep close its swings at the next open. Refusing to
+# schedule a keyless Bot E is safer than scheduling one that no-ops all day and
+# looks healthy in the task list.
+$SwingEnv = Join-Path $Trading 'swing\.env'
+$SwingReady = (Test-Path $SwingEnv) -and
+              ((Get-Content $SwingEnv | Where-Object { $_ -match '^\s*APCA_API_KEY_ID\s*=\s*\S' }).Count -gt 0)
+if ($SwingReady) {
+    Register-BotTask 'Swing-Scan-E' (Join-Path $Trading 'swing\run-swing-scan.cmd') (New-WeekdayTrigger '9:00am')
+    Register-BotTask 'Swing-Bot-E'  (Join-Path $Trading 'swing\run-swingbot.cmd')   (New-SwingTrigger '9:45am')
+} else {
+    Write-Host "  SKIPPED: Swing-Scan-E / Swing-Bot-E - swing\.env has no APCA_API_KEY_ID." -ForegroundColor Yellow
+    Write-Host "           Bot E needs its OWN paper account (see swing\README.md), then re-run this script."
+    foreach ($t in 'Swing-Scan-E','Swing-Bot-E') {
+        if (Get-ScheduledTask -TaskName $t -ErrorAction SilentlyContinue) {
+            Unregister-ScheduledTask -TaskName $t -Confirm:$false
+            Write-Host "  removed stale task: $t"
+        }
+    }
+}
 
 # Keep-awake guardian: holds the laptop awake for the whole session (9:00am->16:05) so it
 # never sleeps mid-session, then releases automatically (sleeps normally outside market hours).
@@ -115,11 +154,11 @@ powercfg /setactive SCHEME_CURRENT
 # --- OneDrive pin (only if the folders are under OneDrive) -------------------
 if ($Trading -like '*OneDrive*') {
     Write-Host "Pinning bot folders always-local (OneDrive)..."
-    foreach ($b in 'bot b','bot c','crypto') {
+    foreach ($b in 'bot b','bot c','crypto','swing') {
         attrib +P -U (Join-Path $Trading "$b\*") /s /d 2>$null
     }
 }
 
 Write-Host "`nDone. Verify with:  schtasks /query /tn ORB-Bot-B /v /fo LIST"
-Write-Host "REMINDER: disable these 6 tasks on any OTHER PC so they don't double-run"
+Write-Host "REMINDER: disable these tasks on any OTHER PC so they don't double-run"
 Write-Host "          against the same paper accounts and state files."

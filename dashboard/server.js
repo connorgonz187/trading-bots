@@ -51,6 +51,27 @@ const BOTS = [
     startingEquity: 100000,
   },
   {
+    id: "e",
+    label: "Bot E",
+    dir: "swing",
+    // Filled in once the third paper account exists; the panel reads live data
+    // from swing/.env either way, so leaving it null only affects the label.
+    account: null,
+    flavor: "Swing 2%/5%, holds days",
+    hasCrypto: false,
+    defaultSide: null,
+    startingEquity: 100000,
+    // Bot E's files are named differently, and it has no EOD flatten — an open
+    // position overnight is the strategy, not a stranded-position alarm.
+    files: {
+      tickLog: "swingbot.log",
+      scanLog: "swing-scan.log",
+      trades: "swing-trades.csv",
+      watchlist: "swing-watchlist.csv",
+    },
+    holdsOvernight: true,
+  },
+  {
     id: "crypto",
     label: "Crypto",
     dir: "crypto",
@@ -61,6 +82,15 @@ const BOTS = [
     noAlpaca: true, // Coinbase-only; the .env's Alpaca keys are just for backtest data
   },
 ];
+
+// Default file names (the ORB bots'). Bot E overrides them via `files`.
+const filesFor = (bot) => ({
+  tickLog: "stockbot.log",
+  scanLog: "scan.log",
+  trades: "stock-trades.csv",
+  watchlist: "watchlist.csv",
+  ...(bot.files || {}),
+});
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const num = (x) => (x == null || x === "" ? null : Number(x));
@@ -356,6 +386,81 @@ function realizedForBot(rows, defaultSide) {
   };
 }
 
+// Bot E holds for days, so its exits land on a DIFFERENT date than its entries
+// and realizedForBot()'s symbol-day matching would report every single trade as
+// unclosed. Pair by EPISODE instead: an entry opens a position for that symbol,
+// later exits draw it down, and the round-trip is booked when the quantity
+// returns to zero.
+//
+// This is only safe because Bot E takes at most one open position per symbol at
+// a time (swingbot.js refuses a second), so there is no ambiguity about which
+// entry an exit belongs to — the failure mode that made cross-day FIFO pairing
+// so wrong for the ORB bots. The remaining hazard is a corporate action inside
+// the hold, so an exit priced more than 50% away from its entry is refused
+// rather than booked: that is exactly the SOXS reverse-split shape that once
+// turned a -$53 account into a reported -$3,403.
+function realizedForSwing(rows) {
+  const openBySym = new Map();
+  const closed = [];
+  let unclosed = 0;
+  let suspicious = 0;
+
+  for (const r of rows) {
+    const sym = r.Symbol;
+    const qty = Math.abs(num(r.Qty) || 0);
+    const price = num(r.Price);
+    if (!sym || !r.Date || price == null || !qty) continue;
+
+    if ((r.Action || "").toUpperCase() === "ENTRY") {
+      const g = openBySym.get(sym) || {
+        symbol: sym, side: (r.Side || "long").toLowerCase(), date: r.Date,
+        qty: 0, notional: 0, exitQty: 0, exitNotional: 0, reason: "",
+      };
+      g.qty += qty;
+      g.notional += price * qty;
+      if (r.Side) g.side = r.Side.toLowerCase();
+      openBySym.set(sym, g);
+      continue;
+    }
+
+    const g = openBySym.get(sym);
+    if (!g) continue; // an exit with no matching open episode — not ours to book
+    const entry = g.notional / g.qty;
+    if (price > entry * 1.5 || price < entry * 0.5) {
+      suspicious++;
+      openBySym.delete(sym);
+      continue;
+    }
+    const take = Math.min(qty, g.qty - g.exitQty);
+    g.exitQty += take;
+    g.exitNotional += price * take;
+    g.reason = r.Reason || g.reason;
+    if (g.exitQty >= g.qty - 1e-9) {
+      const exit = g.exitNotional / g.exitQty;
+      const dir = g.side === "short" ? -1 : 1;
+      closed.push({
+        symbol: sym, side: g.side, qty: g.qty, entry, exit,
+        reason: g.reason, date: r.Date, pnl: (exit - entry) * dir * g.qty,
+      });
+      openBySym.delete(sym);
+    }
+  }
+  unclosed = openBySym.size + suspicious;
+
+  closed.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  const wins = closed.filter((t) => t.pnl > 0).length;
+  const losses = closed.filter((t) => t.pnl < 0).length;
+  return {
+    count: closed.length,
+    wins,
+    losses,
+    pnl: closed.reduce((s, t) => s + t.pnl, 0),
+    winRate: closed.length ? (wins / closed.length) * 100 : null,
+    open: unclosed,
+    recent: closed.slice(-6).reverse(),
+  };
+}
+
 // Guard against the legacy 9-column header (no Side) sitting on top of newer
 // 10-column rows: every field shifts left and Qty ends up holding ENTRY/EXIT.
 // Detect that shape (Action holds a side) and un-shift the row.
@@ -378,18 +483,21 @@ function fixShiftedTradeRow(r) {
 function localForBot(bot) {
   const d = join(ROOT, bot.dir);
   const today = etDate();
+  const f = filesFor(bot);
 
   // health: freshness of the stock-bot tick and (for A) the crypto run
-  const stockLog = fileAge(join(d, "stockbot.log"));
+  const stockLog = fileAge(join(d, f.tickLog));
   const cryptoLog = fileAge(join(d, "bot.log"));
-  const scanLog = fileAge(join(d, "scan.log"));
+  const scanLog = fileAge(join(d, f.scanLog));
 
   // today's stock trades + all-time realized P&L / win rate
-  const stockTrades = readCsvObjects(join(d, "stock-trades.csv")).map(
+  const stockTrades = readCsvObjects(join(d, f.trades)).map(
     fixShiftedTradeRow,
   );
   const stockToday = stockTrades.filter((r) => r.Date === today);
-  const realized = realizedForBot(stockTrades, bot.defaultSide);
+  const realized = bot.holdsOvernight
+    ? realizedForSwing(stockTrades)
+    : realizedForBot(stockTrades, bot.defaultSide);
 
   // crypto (paper) state + recent decisions
   const position = readJson(join(d, "position.json"), {});
@@ -399,7 +507,7 @@ function localForBot(bot) {
     (safety.trades || []).slice(-1)[0] || null;
 
   // watchlist — keep only the most recent date present
-  const wl = readCsvObjects(join(d, "watchlist.csv")).filter(
+  const wl = readCsvObjects(join(d, f.watchlist)).filter(
     (r) => r.Symbol && r.Symbol.trim(),
   );
   let watchlist = [];

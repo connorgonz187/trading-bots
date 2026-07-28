@@ -1,0 +1,21 @@
+{
+  "name": "swing-bot-e",
+  "version": "1.0.0",
+  "description": "Bot E — multi-day swing paper bot on Alpaca: 1-2% stop, 4-7% target, holds overnight",
+  "type": "module",
+  "main": "swingbot.js",
+  "scripts": {
+    "start": "node swingbot.js",
+    "scan": "node swing-scan.js",
+    "dry": "node swingbot.js --dry-run",
+    "auth": "node swingbot.js --check-auth",
+    "backtest": "node swing-bt.js",
+    "premise": "node mfe-study.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
