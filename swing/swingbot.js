@@ -126,7 +126,13 @@ function readWatchlist(today) {
   return { syms: [...new Set(rows.filter((c) => c[0] === latest).map((c) => c[1]))], date: latest, ageDays };
 }
 
-async function waitFill(id, tries = 8, ms = 600) {
+// A market order that is still `partially_filled` is NOT done, and returning it
+// as if it were is how six shares of an 18-share MCD short ended up with no stop
+// on 2026-07-29: the caller read filled_qty=12 mid-fill and armed the OCO for 12.
+// So keep polling through partial fills, and give it long enough (25 × 600ms =
+// 15s) that a thin book has time to complete. A partial can still come back on
+// timeout — callers must size protection off the position, not this order.
+async function waitFill(id, tries = 25, ms = 600) {
   let o;
   for (let i = 0; i < tries; i++) {
     o = await getOrder(id);
@@ -134,7 +140,26 @@ async function waitFill(id, tries = 8, ms = 600) {
     if (["canceled", "rejected", "expired"].includes(o.status)) throw new Error(`entry ${o.status}`);
     await new Promise((r) => setTimeout(r, ms));
   }
+  if (o && o.status === "partially_filled")
+    console.log(`     !! order ${id.slice(0, 8)} still partial (${o.filled_qty}/${o.qty}) after ${((tries * ms) / 1000).toFixed(0)}s`);
   return o;
+}
+
+/**
+ * Shares the broker ACTUALLY holds for a symbol, 0 if none.
+ *
+ * The bracket has to cover the position, so the position is what it gets sized
+ * from — an order's filled_qty is a snapshot that can be stale by the time we
+ * read it. Entries only run when the symbol is absent from both state.open and
+ * the position map, so whatever is held here came from this entry alone.
+ */
+async function heldQty(sym) {
+  try {
+    const p = (await getPositions()).find((x) => x.symbol === sym);
+    return p ? Math.floor(Math.abs(Number(p.qty))) : 0;
+  } catch {
+    return 0;
+  }
 }
 
 // Open orders for a symbol, with OCO/bracket legs FLATTENED into the list.
@@ -440,7 +465,14 @@ async function main() {
       const entrySide = c.sig.side === "long" ? "buy" : "sell";
       const eo = await placeMarket({ symbol: c.sym, qty, side: entrySide });
       const filled = await waitFill(eo.id);
-      const fq = Math.floor(Math.abs(+filled.filled_qty)) || qty;
+      // Size from the position, not from this order. filled_qty is a snapshot and
+      // a late-completing fill leaves the difference resting with no stop — see
+      // heldQty(). Fall back to the order only if the position is not visible yet.
+      const oq = Math.floor(Math.abs(+filled.filled_qty)) || qty;
+      const held = await heldQty(c.sym);
+      const fq = held || oq;
+      if (held && held !== oq)
+        console.log(`     ${c.sym}: order reported ${oq}sh but broker holds ${held}sh — protecting ${held}.`);
       const entry = +filled.filled_avg_price || px;
       // Levels come off the ACTUAL fill, so "2%" means 2% from where we really
       // got in, not from a stale signal price.
