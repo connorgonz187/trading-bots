@@ -104,13 +104,49 @@ export const CFG = {
   // figure, and don't port the number to a consolidated data source unscaled.
   minDollarVol: num(process.env.SWING_MIN_DOLLAR_VOL, 50e6),
 
-  // Sides. Both on by default; the regime filter means only one can fire on a
-  // given day, which keeps the long/short attribution clean inside one account
-  // (lesson 4 of the post-mortem — run the sleeves in ONE account).
+  // Sides. Both on by default. Outside the neutral band the regime filter lets
+  // only one fire on a given day, which keeps long/short attribution clean
+  // inside one account (lesson 4 of the post-mortem — run the sleeves in ONE
+  // account). Inside the band both are permitted; they still cannot collide on
+  // the same name, because the per-symbol trend test that follows is disjoint.
   longs: flag(process.env.SWING_LONGS, true),
   shorts: flag(process.env.SWING_SHORTS, true),
   regime: flag(process.env.SWING_REGIME, true),
   regimeLen: parseInt(process.env.SWING_REGIME_LEN || "50", 10),
+  // Half-width of the NEUTRAL zone around the regime MA, in percent.
+  //
+  // The filter existed to stop us buying into a falling market. Written as a
+  // bare sign test it does much more than that: it hands the entire long sleeve
+  // an off-switch the moment the index ticks a hair below its own average. On
+  // 2026-07-28 SPY closed 0.54% under its SMA50 — inside a single day's ATR —
+  // so every long was blocked, while only 3 of the 23 watchlist names were
+  // themselves in downtrends (the index dipped; its constituents had not). The
+  // short sleeve therefore had almost nothing to fire on either, and the day
+  // was a structurally guaranteed zero-trade day rather than a considered pass.
+  //
+  // Inside the band the regime is "neutral", which lifts the veto on LONGS
+  // only (see the asymmetry note in entrySignal — shorts still need a
+  // decisively bear tape).
+  //
+  // DEFAULT 0, i.e. OFF, and that default is a measurement, not an oversight.
+  // The zero-trade day is a real pathology, but backtesting the cure over 3
+  // years says it costs more than it saves: the extra longs a band admits are
+  // taken when SPY is under its own SMA50, and they are worse than the average
+  // long — which is the filter doing its job, not failing at it.
+  //
+  //   band(asym)  n    win    PF    exp
+  //   0           224  37.9%  1.02  +0.012R   <- shipped default
+  //   0.5         225  37.8%  1.02  +0.010R
+  //   1.0         224  37.5%  1.00  +0.000R
+  //   1.5         225  36.9%  0.97  -0.020R
+  //   2.0         220  38.6%  1.10  +0.063R   <- noise, not signal: +0.08R
+  //                                              swing on 5 fewer trades than
+  //                                              1.5. Do not chase it.
+  //
+  // Kept as a knob because the pathology is worth being able to switch off in a
+  // hurry, and because the measurement should be re-runnable. If you enable it,
+  // re-run `node swing-bt.js 1095` first and put the numbers in this table.
+  regimeBandPct: num(process.env.SWING_REGIME_BAND_PCT, 0) / 100,
 };
 
 // Longest lookback any rule needs, plus room for the RSI seed.
@@ -210,14 +246,43 @@ export function passesUniverseGate(bars, cfg = CFG) {
   return { ok: true, ind };
 }
 
-/** "bull" | "bear" | null — from the regime symbol's own daily bars. */
+/**
+ * "bull" | "bear" | "neutral" | null — from the regime symbol's own daily bars.
+ *
+ * "neutral" means the index is within `regimeBandPct` of its own average, i.e.
+ * it is not making a directional statement worth vetoing a trade over. Callers
+ * treat it as "no veto": the `regime !== "bear"` / `regime !== "bull"` tests in
+ * entrySignal() already read it that way, so both sleeves stay open.
+ *
+ * `null` still means UNKNOWN (filter disabled, or not enough history) and is
+ * likewise not a veto — do not conflate the two when logging.
+ */
 export function regimeOf(regimeBars, cfg = CFG) {
   if (!cfg.regime) return null;
   const closes = (regimeBars || []).map((b) => b.close);
   const ma = sma(closes, cfg.regimeLen);
   const px = closes[closes.length - 1];
   if (ma == null || px == null) return null;
-  return px >= ma ? "bull" : "bear";
+  const dev = (px - ma) / ma;
+  // `> 0` so that a band of 0 is EXACTLY the old sign test, including the
+  // px == ma tie (which used to read "bull"). Without it the default would
+  // quietly change behaviour on that one edge.
+  if (cfg.regimeBandPct > 0 && Math.abs(dev) <= cfg.regimeBandPct) return "neutral";
+  return dev >= 0 ? "bull" : "bear";
+}
+
+/**
+ * Signed % deviation of the regime symbol from its MA. Logging only — but log
+ * it, because "bear" alone hides whether the tape was decisively down or a
+ * rounding error away from neutral, and that distinction is the whole point of
+ * the band.
+ */
+export function regimeDevPct(regimeBars, cfg = CFG) {
+  const closes = (regimeBars || []).map((b) => b.close);
+  const ma = sma(closes, cfg.regimeLen);
+  const px = closes[closes.length - 1];
+  if (ma == null || px == null || !ma) return null;
+  return ((px - ma) / ma) * 100;
 }
 
 /**
@@ -235,6 +300,31 @@ export function entrySignal(bars, regime, cfg = CFG) {
   const extLong = (i.price - i.fast) / i.fast;
   const extShort = (i.fast - i.price) / i.fast;
 
+  // The band is deliberately ASYMMETRIC, and the backtest is why.
+  //
+  // Its job is to stop a hairline index reading from killing the long sleeve —
+  // that is the 2026-07-28 failure. It is NOT a licence to short a market that
+  // is not actually falling. Opening BOTH sleeves inside the band (the obvious
+  // symmetric reading) tested worse over 3 years: it added 18 shorts to a
+  // sleeve whose expectancy is negative in every configuration measured, and
+  // took the whole strategy from +0.012R to +0.006R per trade.
+  //
+  //   band  shorts  n    win    PF    exp
+  //   0     on      224  37.9%  1.02  +0.012R   <- current default
+  //   1.0   on      249  38.2%  1.01  +0.006R   <- symmetric band
+  //   1.5   on      258  36.8%  0.94  -0.042R
+  //   0     off     188  38.8%  1.06  +0.035R   <- long-only
+  //   1.0   off     195  38.5%  1.05  +0.032R
+  //
+  // The row that matters is the fourth. Dropping the short sleeve entirely
+  // roughly TRIPLES expectancy (+0.012R -> +0.035R, PF 1.02 -> 1.06) and is
+  // steadier year by year: 3 of 4 years positive instead of 2, and the worst
+  // year improves from -0.269R to -0.155R. That is a SWING_SHORTS decision,
+  // not a filter one, so it is not made here — but it is the single biggest
+  // lever this strategy has, and it is why the band is not worth chasing.
+  //
+  // `null` (filter off / not enough history) is UNKNOWN and vetoes nothing,
+  // which is a different thing from neutral — keep them distinct here.
   if (cfg.longs && upTrend && regime !== "bear" && extLong <= cfg.maxExtPct) {
     const trig =
       cfg.trigger === "breakout"
@@ -250,7 +340,7 @@ export function entrySignal(bars, regime, cfg = CFG) {
       };
   }
 
-  if (cfg.shorts && downTrend && regime !== "bull" && extShort <= cfg.maxExtPct) {
+  if (cfg.shorts && downTrend && regime !== "bull" && regime !== "neutral" && extShort <= cfg.maxExtPct) {
     const trig =
       cfg.trigger === "breakout"
         ? i.price < i.priorLow
