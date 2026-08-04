@@ -157,6 +157,40 @@ console.log("\nregime");
   const down = series({ n: 120, drift: -0.003, wiggle: 0.001 });
   ok("falling series is bear", regimeOf(down) === "bear");
   ok("regime is null when disabled", regimeOf(up, { ...CFG, regime: false }) === null);
+
+  // The neutral band. Default is 0 (off) — a decisive series must still read
+  // decisively, and only a wide enough band should soften it.
+  ok("band=0 leaves a decisive series decisive", regimeOf(down, { ...CFG, regimeBandPct: 0 }) === "bear");
+  ok(
+    "a wide band calls the same series neutral",
+    regimeOf(down, { ...CFG, regimeBandPct: 1 }) === "neutral",
+    regimeOf(down, { ...CFG, regimeBandPct: 1 }),
+  );
+  ok(
+    "a decisive move still escapes a narrow band",
+    regimeOf(down, { ...CFG, regimeBandPct: 0.001 }) === "bear",
+  );
+}
+
+console.log("\nregime band is asymmetric (longs unblocked, shorts are not)");
+{
+  // Same construction as the entry-signal section, mirrored for the short side.
+  const longBars = series({ n: 120, drift: 0.002, wiggle: 0.002, tail: [-0.02, -0.02, 0.03] });
+  const shortBars = series({ n: 120, drift: -0.002, wiggle: 0.002, tail: [0.02, 0.02, -0.03] });
+
+  const shortSig = entrySignal(shortBars, "bear");
+  ok("the short setup fires in a bear regime", shortSig && shortSig.side === "short", JSON.stringify(shortSig));
+
+  // The whole point of the asymmetry: neutral is permission to buy, never to
+  // short. Symmetric behaviour here cost +0.012R -> +0.006R over 3 years.
+  const neutralLong = entrySignal(longBars, "neutral");
+  ok("neutral LIFTS the long veto", neutralLong && neutralLong.side === "long", JSON.stringify(neutralLong));
+  ok("neutral does NOT permit a short", entrySignal(shortBars, "neutral") === null);
+
+  // null means UNKNOWN (filter disabled / no history), which vetoes nothing —
+  // a different thing from neutral, and easy to conflate.
+  ok("null regime still permits a short", entrySignal(shortBars, null) !== null);
+  ok("a bull regime still vetoes the short", entrySignal(shortBars, "bull") === null);
 }
 
 console.log("\nconfig sanity");
