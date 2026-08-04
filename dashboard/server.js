@@ -498,6 +498,35 @@ function localForBot(bot) {
   };
 }
 
+// ── market data quotes ──────────────────────────────────────────────────────
+async function getQuotes(symbols, env) {
+  const id = env.APCA_API_KEY_ID;
+  const secret = env.APCA_API_SECRET_KEY;
+  if (!id || !secret || !symbols.length) return {};
+  const base = env.APCA_BASE_URL || ALPACA_BASE;
+  const H = {
+    "APCA-API-KEY-ID": id,
+    "APCA-API-SECRET-KEY": secret,
+  };
+  try {
+    const symStr = symbols.join(",");
+    const data = await fetchJson(
+      `${base}/v1/last/stocks/multi?symbols=${encodeURIComponent(symStr)}`,
+      { headers: H },
+      5000,
+    );
+    const quotes = {};
+    if (data.last) {
+      for (const [sym, quote] of Object.entries(data.last)) {
+        quotes[sym] = num(quote.price);
+      }
+    }
+    return quotes;
+  } catch (e) {
+    return {};
+  }
+}
+
 // ── aggregate everything ─────────────────────────────────────────────────────
 let stateCache = { ts: 0, data: null };
 async function buildState() {
@@ -598,6 +627,21 @@ const server = http.createServer(async (req, res) => {
         "Cache-Control": "no-store",
       });
       return res.end(JSON.stringify(data));
+    }
+    if (req.url.startsWith("/api/quotes")) {
+      const url = new URL(req.url, "http://localhost");
+      const symbols = (url.searchParams.get("symbols") || "").split(",").filter(Boolean);
+      if (!symbols.length) {
+        res.writeHead(400).end(JSON.stringify({ error: "no symbols" }));
+        return;
+      }
+      const env = parseEnv(BOTS[0].dir);
+      const quotes = await getQuotes(symbols, env);
+      res.writeHead(200, {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+      });
+      return res.end(JSON.stringify(quotes));
     }
     res.writeHead(404).end("not found");
   } catch (e) {

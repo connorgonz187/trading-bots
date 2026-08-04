@@ -718,6 +718,25 @@
         firstRender = false;
       }
 
+      async function refreshQuotes() {
+        try {
+          const cells = document.querySelectorAll(".current-price");
+          if (!cells.length) return;
+          const symbols = Array.from(cells).map((el) => el.dataset.symbol).filter(Boolean);
+          if (!symbols.length) return;
+          const r = await fetch(`/api/quotes?symbols=${encodeURIComponent(symbols.join(","))}`, { cache: "no-store" });
+          if (!r.ok) return;
+          const quotes = await r.json();
+          for (const cell of cells) {
+            const sym = cell.dataset.symbol;
+            const price = quotes[sym];
+            if (price != null) setTick(cell, fmtUsd(price), price);
+          }
+        } catch (e) {
+          // silently ignore quote fetch failures
+        }
+      }
+
       $("fsBtn").addEventListener("click", () => {
         if (!document.fullscreenElement) document.documentElement.requestFullscreen();
         else document.exitFullscreen();
@@ -725,6 +744,7 @@
 
       refresh();
       setInterval(refresh, 5000); // data fetch (Alpaca + bot files)
+      setInterval(refreshQuotes, 5000); // quote updates
       setInterval(tickClock, 1000); // live clock, accurate to the second
     </script>
   </body>
