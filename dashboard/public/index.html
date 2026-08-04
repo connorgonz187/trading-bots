@@ -572,10 +572,9 @@
             <td>${p.qty}</td>
             <td>${fmtUsd(p.avgEntry)}</td>
             <td class="current-price" data-symbol="${esc(p.symbol)}">${fmtUsd(p.current)}</td>
-            <td>${fmtUsd(p.current)}</td>
             <td class="${cls(p.unrealizedPL)}">${signUsd(p.unrealizedPL)}<br><span style="font-size:9.5px">${p.unrealizedPLpct >= 0 ? "+" : ""}${p.unrealizedPLpct?.toFixed(2)}%</span></td>
           </tr>`).join("");
-        return `<table><thead><tr><th>Symbol</th><th>Qty</th><th>Entry</th><th>Current</th><th>Mark</th><th>Unreal</th></tr></thead><tbody>${rows}</tbody></table>`;
+        return `<table><thead><tr><th>Symbol</th><th>Qty</th><th>Entry</th><th>Current</th><th>Unreal</th></tr></thead><tbody>${rows}</tbody></table>`;
       }
 
       function tradesTable(rows) {
