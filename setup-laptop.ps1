@@ -133,9 +133,17 @@ if ($SwingReady) {
     }
 }
 
-# Keep-awake guardian: holds the laptop awake for the whole session (9:00am->16:05) so it
+# Keep-awake guardian: holds the machine awake for the whole session (8:30am->16:05) so it
 # never sleeps mid-session, then releases automatically (sleeps normally outside market hours).
-# Relying on each task's WakeToRun alone is flaky and lets the laptop nap between the 5-min runs.
+# Relying on each task's WakeToRun alone is flaky and lets the machine nap between the 5-min runs.
+#
+# Starts at 8:30, NOT 9:00, and the half hour matters. It has to be awake BEFORE
+# the first job it is protecting, otherwise it cannot prevent the oversleep that
+# delays its own start. On 2026-08-04 it was still on the 9:00 trigger: the
+# machine slept through the night, everything (8:55 regime + all three 9:00
+# scanners + keep-awake itself) fired together at 09:01:33 on catch-up, the
+# scanners hit a network that was not up yet, and both ORB bots ran the whole
+# session with no watchlist. 8:30 puts it ahead of the 8:55 regime call.
 $kaScript = Join-Path $Trading 'keep-awake.ps1'
 $kaAction = New-ScheduledTaskAction -Execute 'powershell.exe' `
     -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$kaScript`" -Until 16:05" `
@@ -143,7 +151,7 @@ $kaAction = New-ScheduledTaskAction -Execute 'powershell.exe' `
 $kaSettings = New-ScheduledTaskSettingsSet -WakeToRun -StartWhenAvailable `
     -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 8)
 Register-ScheduledTask -TaskName 'KeepAwake-MarketHours' -Action $kaAction `
-    -Trigger (New-WeekdayTrigger '9:00am') -Settings $kaSettings -Principal $principal `
+    -Trigger (New-WeekdayTrigger '8:30am') -Settings $kaSettings -Principal $principal `
     -Description 'Holds the laptop awake during the trading session, then releases so it sleeps normally.' -Force | Out-Null
 Write-Host "  registered: KeepAwake-MarketHours"
 
@@ -152,6 +160,20 @@ Write-Host "`nEnabling wake timers (AC + battery)..."
 powercfg /setacvalueindex SCHEME_CURRENT SUB_SLEEP RTCWAKE 1 | Out-Null
 powercfg /setdcvalueindex SCHEME_CURRENT SUB_SLEEP RTCWAKE 1 | Out-Null
 powercfg /setactive SCHEME_CURRENT
+
+# Read it back. Setting it is not the same as it sticking: on 2026-08-04 this was
+# found Disabled on both AC and DC despite this script having set it, so a
+# Windows update or a power-plan switch had silently reverted it. With wake
+# timers off, every -WakeToRun above is inert and the whole schedule slides to
+# whenever someone happens to open the lid. Fail loudly rather than pretend.
+$rtc = (powercfg /query SCHEME_CURRENT SUB_SLEEP RTCWAKE) -join "`n"
+$ac  = [regex]::Match($rtc, 'Current AC Power Setting Index:\s*(0x[0-9a-f]+)').Groups[1].Value
+$dc  = [regex]::Match($rtc, 'Current DC Power Setting Index:\s*(0x[0-9a-f]+)').Groups[1].Value
+if ($ac -eq '0x00000000' -or $dc -eq '0x00000000') {
+    Write-Host "  WARNING: wake timers still disabled (AC=$ac DC=$dc) - tasks will NOT wake this machine." -ForegroundColor Red
+} else {
+    Write-Host "  wake timers enabled (AC=$ac DC=$dc)"
+}
 # Laptop: do nothing when lid is closed while plugged in (so it can run with lid shut on AC)
 powercfg /setacvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 0 | Out-Null
 powercfg /setactive SCHEME_CURRENT

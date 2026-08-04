@@ -18,7 +18,7 @@
  */
 import "dotenv/config";
 import { existsSync, writeFileSync, readFileSync } from "fs";
-import { mostActives, dailyBarsMulti } from "./alpaca.js";
+import { getClock, mostActives, dailyBarsMulti } from "./alpaca.js";
 import { CFG, WARMUP, passesUniverseGate, indicators } from "./swing-strategy.js";
 
 const FILE = process.env.SWING_WATCHLIST || "swing-watchlist.csv";
@@ -51,7 +51,33 @@ const CORE = (process.env.SWING_UNIVERSE ||
 
 const etDate = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
 
+// Cold-wake network gate — see the note in bot b/scan.js. Bot E's scanner needs
+// this too: most-actives is already optional here, but dailyBarsMulti is not, so
+// a network that is not up yet still kills the run (it did on 2026-08-04).
+const NET_WAIT_MS = Number(process.env.SCAN_NET_WAIT_MS || 8 * 60 * 1000);
+const NET_PROBE_MS = Number(process.env.SCAN_NET_PROBE_MS || 10 * 1000);
+
+async function waitForNetwork() {
+  const deadline = Date.now() + NET_WAIT_MS;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await getClock();
+      if (attempt > 1) console.log(`  network up after ${attempt} probes.`);
+      return;
+    } catch (e) {
+      if (Date.now() + NET_PROBE_MS >= deadline) {
+        throw new Error(
+          `network still down after ${Math.round(NET_WAIT_MS / 1000)}s: ${e.message}`,
+        );
+      }
+      console.log(`  waiting for network (probe ${attempt}: ${e.message})`);
+      await new Promise((r) => setTimeout(r, NET_PROBE_MS));
+    }
+  }
+}
+
 async function main() {
+  await waitForNetwork();
   const cand = new Set(CORE);
   // Most-actives is additive only: it can introduce a liquid name the core list
   // missed, but it cannot bypass the gate.

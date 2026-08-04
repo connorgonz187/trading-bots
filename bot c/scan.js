@@ -9,7 +9,7 @@
  */
 import "dotenv/config";
 import { existsSync, writeFileSync, appendFileSync } from "fs";
-import { mostActives, movers, snapshots } from "./alpaca.js";
+import { getClock, mostActives, movers, snapshots } from "./alpaca.js";
 
 const MIN_PRICE = Number(process.env.SCAN_MIN_PRICE || "5");
 const MAX_PRICE = Number(process.env.SCAN_MAX_PRICE || "500");
@@ -38,7 +38,39 @@ const refBar = (s) =>
 const rangePct = (b) => (b ? ((b.h - b.l) / b.o) * 100 : 0);
 const sessionMove = (b) => (b ? ((b.c - b.o) / b.o) * 100 : 0);
 
+// Cold-wake network gate. The 9:00 trigger is -StartWhenAvailable, so on a
+// machine that slept overnight Task Scheduler fires it the moment it catches up
+// — often before Wi-Fi/DNS are back. alpaca.js already retries every call, but
+// its budget is ~5s (3 tries, linear 0.8s) and deliberately so: a live 5-min
+// trading cycle must never stall on a hung socket. A pre-market scanner has ~30
+// minutes of slack before the open, so it can afford to wait properly.
+// On 2026-08-04 all three scanners exited 1 on "fetch failed" at 09:01:33 (every
+// task fired at once on wake) and both ORB bots sat watchlist-less all session.
+// Costs nothing when the network is already up: the first probe just succeeds.
+const NET_WAIT_MS = Number(process.env.SCAN_NET_WAIT_MS || 8 * 60 * 1000);
+const NET_PROBE_MS = Number(process.env.SCAN_NET_PROBE_MS || 10 * 1000);
+
+async function waitForNetwork() {
+  const deadline = Date.now() + NET_WAIT_MS;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await getClock();
+      if (attempt > 1) console.log(`  network up after ${attempt} probes.`);
+      return;
+    } catch (e) {
+      if (Date.now() + NET_PROBE_MS >= deadline) {
+        throw new Error(
+          `network still down after ${Math.round(NET_WAIT_MS / 1000)}s: ${e.message}`,
+        );
+      }
+      console.log(`  waiting for network (probe ${attempt}: ${e.message})`);
+      await new Promise((r) => setTimeout(r, NET_PROBE_MS));
+    }
+  }
+}
+
 async function main() {
+  await waitForNetwork();
   const [ma, mv] = await Promise.all([mostActives(40), movers(40)]);
   const cand = new Set();
   for (const x of ma.most_actives || []) cand.add(x.symbol);
