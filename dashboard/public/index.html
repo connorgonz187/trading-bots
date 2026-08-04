@@ -488,7 +488,7 @@
     </header>
 
     <div class="grid" id="grid"></div>
-    <footer>Read-only paper-trading monitor · refresh 10s · local files + Alpaca paper API</footer>
+    <footer>Read-only paper-trading monitor · refresh 5s · local files + Alpaca paper API</footer>
 
     <script>
       const $ = (id) => document.getElementById(id);
@@ -571,10 +571,11 @@
             <td><span class="sym">${esc(p.symbol)}</span> <span class="tag ${p.side}">${esc(p.side)}</span></td>
             <td>${p.qty}</td>
             <td>${fmtUsd(p.avgEntry)}</td>
+            <td class="current-price" data-symbol="${esc(p.symbol)}">${fmtUsd(p.current)}</td>
             <td>${fmtUsd(p.current)}</td>
             <td class="${cls(p.unrealizedPL)}">${signUsd(p.unrealizedPL)}<br><span style="font-size:9.5px">${p.unrealizedPLpct >= 0 ? "+" : ""}${p.unrealizedPLpct?.toFixed(2)}%</span></td>
           </tr>`).join("");
-        return `<table><thead><tr><th>Symbol</th><th>Qty</th><th>Entry</th><th>Mark</th><th>Unreal</th></tr></thead><tbody>${rows}</tbody></table>`;
+        return `<table><thead><tr><th>Symbol</th><th>Qty</th><th>Entry</th><th>Current</th><th>Mark</th><th>Unreal</th></tr></thead><tbody>${rows}</tbody></table>`;
       }
 
       function tradesTable(rows) {
@@ -723,7 +724,7 @@
       });
 
       refresh();
-      setInterval(refresh, 10000); // data fetch (Alpaca + bot files)
+      setInterval(refresh, 5000); // data fetch (Alpaca + bot files)
       setInterval(tickClock, 1000); // live clock, accurate to the second
     </script>
   </body>
