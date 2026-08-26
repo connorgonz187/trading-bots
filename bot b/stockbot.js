@@ -11,7 +11,13 @@
  *                      fixed R target — let winners run. trail distance is
  *                      ATR-based (ORB_TRAIL_ATR_MULT × ATR) with a price-%
  *                      floor (ORB_TRAIL_MIN_PCT) so cheap names aren't strangled;
- *                      override with a fixed ORB_TRAIL_PRICE.
+ *                      override with a fixed ORB_TRAIL_PRICE. NOTE: in this mode
+ *                      the trail is the ONLY protective order at the broker, so
+ *                      position size is derived from the trail distance, not
+ *                      from the (never-sent) OR stop.
+ *   ORB_TARGET_ATR_MULT  bracket mode only: ceiling on the take-profit distance
+ *                      in ATRs (default 1). Stops R from placing the target
+ *                      where the stock cannot reach it. 0 = uncapped.
  *
  * RISK CONTROLS (all env-tunable, on by default):
  *   ORB_REGIME=true       veto longs when SPY is decisively below VWAP and
@@ -154,6 +160,12 @@ const MAX_POSITIONS = parseInt(process.env.ORB_MAX_POSITIONS || "4", 10);
 const MAX_PER_SECTOR = parseInt(process.env.ORB_MAX_PER_SECTOR || "2", 10);
 const MAX_DAILY_LOSS = parseFloat(process.env.ORB_MAX_DAILY_LOSS || "150");
 const MIN_RISK_FRAC = parseFloat(process.env.STOCK_MIN_RISK_FRAC || "0.5");
+// Ceiling on the take-profit distance, in ATRs — see the entry block. Only bites
+// in bracket (non-trailing) mode, where the take-profit is a resting order.
+// NOTE the unit: atr() runs on 5-MINUTE bars, so 1 ATR here is roughly a
+// 70-minute range, not a daily one. Multiples are correspondingly larger than
+// they would be against a daily ATR — 2.0 is calibrated, not conservative.
+const TARGET_ATR_MULT = parseFloat(process.env.ORB_TARGET_ATR_MULT || "2");
 const TRAIL_ATR_MULT = parseFloat(process.env.ORB_TRAIL_ATR_MULT || "2");
 const TRAIL_MIN_PCT = parseFloat(process.env.ORB_TRAIL_MIN_PCT || "1") / 100;
 
@@ -603,7 +615,23 @@ async function main() {
 
       const riskPerShare = Math.abs(price - stop);
       if (riskPerShare <= 0) continue;
-      let qty = Math.floor(RISK_USD / riskPerShare);
+
+      // Size off the distance the EXIT will really sit at, not off a stop we
+      // never send. In trailing mode the ORB `stop` is computed, stored in
+      // state, and then discarded — the only protective order at the broker is
+      // the trailing stop, and it is usually about half as far away. The
+      // 2026-08-26 audit found the consequence: 225 exits all-time, ZERO stop
+      // fills, ZERO target fills, and no realised loss worse than -0.72R,
+      // because "risk $50" was really risking ~$25. Deriving qty from the trail
+      // makes STOCK_RISK_USD mean what it says. Bracket mode is unaffected:
+      // there the stop IS the resting order, so the two distances are the same.
+      const atrVal = atr(bars, 14);
+      const trailDist = Math.max(
+        atrVal ? TRAIL_ATR_MULT * atrVal : riskPerShare,
+        TRAIL_MIN_PCT * price,
+      );
+      const protectPerShare = TRAILING ? trailDist : riskPerShare;
+      let qty = Math.floor(RISK_USD / protectPerShare);
       if (qty < 1) qty = 1;
       // Hard notional ceiling. Note the floor: if even ONE share is worth more
       // than the cap this lands on 0 and the trade is skipped outright — the cap
@@ -616,7 +644,7 @@ async function main() {
 
       // If the notional cap shrank risk well below target, the trade isn't a fair
       // representative of the strategy (its P/L is dwarfed) — skip for comparability.
-      const dollarRisk = riskPerShare * qty;
+      let dollarRisk = protectPerShare * qty;
       if (dollarRisk < RISK_USD * MIN_RISK_FRAC) {
         console.log(`  ${sym}: notional cap shrinks risk to $${dollarRisk.toFixed(0)} (< ${(MIN_RISK_FRAC * 100).toFixed(0)}% of $${RISK_USD}) — skip.`);
         continue;
@@ -640,14 +668,23 @@ async function main() {
         }
         const eo = res.order;
         const filled = await waitFill(eo.id);
-        const fqty = Math.floor(Math.abs(+filled.filled_qty)) || qty;
+        // Protect the POSITION, not this order. filled_qty is a snapshot and a
+        // late-completing fill leaves the difference resting with no stop — see
+        // heldQty(). Fall back to the order only if the position isn't visible yet.
+        const oqty = Math.floor(Math.abs(+filled.filled_qty)) || qty;
+        const held = await heldQty(sym);
+        const fqty = held || oqty;
+        if (held && held !== oqty)
+          console.log(`  ${sym}: order reported ${oqty}sh but broker holds ${held}sh — protecting ${held}.`);
         entry = +filled.filled_avg_price || price;
         qty = fqty;
-        const atrVal = atr(bars, 14);
         const trail = Number(process.env.ORB_TRAIL_PRICE) || Math.max(
           atrVal ? TRAIL_ATR_MULT * atrVal : riskPerShare,
           TRAIL_MIN_PCT * entry,
         );
+        // The trail is what stands between this position and a loss, so it is
+        // what the scorecard's "risk" has to mean — recompute off the real fill.
+        dollarRisk = trail * qty;
         // Guarded too: on 2026-07-28 the twin instances each armed their own
         // trailing stop 21ms apart, so a single exit fired two stop orders.
         const trailRes = await submitGuarded(
@@ -661,7 +698,37 @@ async function main() {
         state.entered[sym] = { side, qty, entry, stop, risk: dollarRisk, trail: true, exitedQty: 0 };
         tgtStr = `trail${trail.toFixed(2)}`;
       } else {
-        target = side === "long" ? entry + R * riskPerShare : entry - R * riskPerShare;
+        // Cap the take-profit at a distance the name actually travels. A flat R
+        // multiple ignores volatility, and the 2026-08-26 audit showed what that
+        // costs: the 2R target filled on 6 of ~100 exits, and on 2026-08-24
+        // MRNA's target sat 21.9% below the entry — unreachable, so every trade
+        // defaulted to the EOD flatten and the take-profit leg was decoration.
+        //
+        // The multiple is measured, not guessed. Over the 63 real entries of
+        // 2026-07-29..08-25, favourable excursion between entry and 15:55 was:
+        //
+        //     target      reached by      target      reached by
+        //     1.0×ATR        73%          0.75R          27%
+        //     1.5×ATR        62%          1.00R          17%
+        //     2.0×ATR        43%          1.25R          11%
+        //     3.0×ATR        19%          2.00R           2%
+        //
+        // 2×ATR is the knee: still hit on ~43% of entries, and far enough out to
+        // be worth taking. ORB_TARGET_ATR_MULT=0 restores uncapped R behaviour.
+        //
+        // The same study exposes something this cap does NOT fix. The OR stop
+        // runs a median 3.48×ATR wide while median favourable excursion is only
+        // 1.88×ATR, so a reachable target is worth ~0.57R and the structure
+        // cannot pay 1:1. The stop width is the thing to attack next; capping
+        // the target just stops the take-profit leg being decorative.
+        let tgtDist = R * riskPerShare;
+        if (TARGET_ATR_MULT > 0 && atrVal) {
+          const capped = Math.min(tgtDist, TARGET_ATR_MULT * atrVal);
+          if (capped < tgtDist)
+            console.log(`  ${sym}: target ${R}R ($${tgtDist.toFixed(2)}/sh) capped to ${TARGET_ATR_MULT}×ATR ($${capped.toFixed(2)}/sh).`);
+          tgtDist = capped;
+        }
+        target = side === "long" ? entry + tgtDist : entry - tgtDist;
         const place = side === "long" ? placeBracketBuy : placeBracketSell;
         const entryKey = coid("orb", now.date, sym, "entry");
         const res = await submitGuarded(place, { symbol: sym, qty, takeProfit: target, stopLoss: stop }, entryKey);
@@ -677,7 +744,11 @@ async function main() {
         const filled = await waitFill(order.id).catch(() => null);
         if (filled && +filled.filled_avg_price) {
           entry = +filled.filled_avg_price;
-          qty = Math.floor(Math.abs(+filled.filled_qty)) || qty;
+          // The broker sizes the bracket's OCO legs to whatever the entry
+          // actually filled, so protection can't be orphaned here the way the
+          // trailing leg could — but the scorecard still wants the real number.
+          qty = (await heldQty(sym)) || Math.floor(Math.abs(+filled.filled_qty)) || qty;
+          dollarRisk = riskPerShare * qty;
         }
         state.entered[sym] = { side, qty, entry, stop, target, risk: dollarRisk, exitedQty: 0 };
         tgtStr = `tgt${target.toFixed(2)}`;
@@ -770,7 +841,16 @@ async function flattenAll(positions, state, now, reason) {
 }
 
 // Poll an order until it fills (paper market orders fill ~instantly).
-async function waitFill(id, tries = 6, ms = 600) {
+//
+// A `partially_filled` order is NOT done, and treating it as done is how three
+// shares of a 70-share CIFR short ended up with no trailing stop on 2026-08-24:
+// the caller read filled_qty=67 mid-fill, armed the trail for 67, and the last
+// three filled a beat later with nothing behind them. They sat out overnight.
+// swingbot.js already learned this (same bug, MCD, 2026-07-29) — so poll through
+// partials, and long enough (25 × 600ms = 15s) that a thin book can finish. A
+// partial can still come back on timeout, which is why callers size protection
+// off the POSITION via heldQty(), not off this order.
+async function waitFill(id, tries = 25, ms = 600) {
   let o;
   for (let i = 0; i < tries; i++) {
     o = await getOrder(id);
@@ -779,7 +859,26 @@ async function waitFill(id, tries = 6, ms = 600) {
       throw new Error(`entry ${o.status}`);
     await new Promise((r) => setTimeout(r, ms));
   }
+  if (o && o.status === "partially_filled")
+    console.log(`  !! order ${id.slice(0, 8)} still partial (${o.filled_qty}/${o.qty}) after ${((tries * ms) / 1000).toFixed(0)}s`);
   return o; // best effort — caller falls back to signal price/qty
+}
+
+/**
+ * Shares the broker ACTUALLY holds for a symbol, 0 if none (unsigned).
+ *
+ * Protection has to cover the position, so the position is what it gets sized
+ * from — an order's filled_qty is a snapshot that can be stale by the time we
+ * read it. Entries only run for symbols absent from state.entered and from the
+ * position map, so whatever is held here came from this entry alone.
+ */
+async function heldQty(sym) {
+  try {
+    const p = (await getPositions()).find((x) => x.symbol === sym);
+    return p ? Math.abs(Math.floor(Number(p.qty))) : 0;
+  } catch {
+    return 0; // unknown → caller falls back to the order's filled_qty
+  }
 }
 
 // After cancelAllOrders(), the broker keeps reporting the orders as open for a

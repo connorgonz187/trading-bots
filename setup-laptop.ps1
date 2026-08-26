@@ -45,7 +45,13 @@ Write-Host "Trading dir : $Trading"
 Write-Host "Running as  : $User`n"
 
 # --- shared task settings ---------------------------------------------------
-$settings  = New-ScheduledTaskSettingsSet -WakeToRun -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+# ExecutionTimeLimit matters more than it looks. These tasks default to
+# MultipleInstances=IgnoreNew, so a single hung run BLOCKS every later repeat
+# until it is killed - and the limit used to be the 72h default, which means one
+# stuck cycle could silently take out three days of trading. A cycle does its
+# work in seconds; ten minutes is generous and bounds the damage.
+$settings  = New-ScheduledTaskSettingsSet -WakeToRun -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
+    -ExecutionTimeLimit (New-TimeSpan -Minutes 10)
 $principal = New-ScheduledTaskPrincipal -UserId $User -LogonType S4U -RunLevel Highest
 
 function Register-BotTask {
@@ -53,6 +59,15 @@ function Register-BotTask {
     $action = New-ScheduledTaskAction -Execute $Cmd -WorkingDirectory (Split-Path $Cmd)
     Register-ScheduledTask -TaskName $Name -Action $action -Trigger $Trigger `
         -Settings $settings -Principal $principal -Force | Out-Null
+    Write-Host "  registered: $Name"
+}
+
+# Same, for tasks that run a script through node directly rather than via a .cmd.
+function Register-NodeTask {
+    param([string]$Name, [string]$WorkDir, [string]$ScriptArgs, $Trigger, [string]$Description = '')
+    $action = New-ScheduledTaskAction -Execute $Node -Argument $ScriptArgs -WorkingDirectory $WorkDir
+    Register-ScheduledTask -TaskName $Name -Action $action -Trigger $Trigger `
+        -Settings $settings -Principal $principal -Description $Description -Force | Out-Null
     Write-Host "  registered: $Name"
 }
 
@@ -133,6 +148,36 @@ if ($SwingReady) {
     }
 }
 
+# --- EOD flatten backstop ----------------------------------------------------
+# stockbot.js flattens at 15:55 from inside its own 5-minute loop, which means
+# the flatten only happens if that loop is still alive at 15:55. Over
+# 2026-07-29..08-25 it often was not: the machine slept mid-session on 08-03,
+# 08-05 and 08-24, the last cycle those days was 14:35, 13:35 and 14:30, and the
+# book was left open overnight. The 08-24 carry cost Bot C $189 on a single
+# gap (MRNA +19.5% against a short) and Bot B $67.
+#
+# So the flatten gets its own task, independent of the trading loop. It fires
+# twice - once after the bot's own attempt, once as a last chance before the
+# close - and is a no-op when the account is already flat, which is the normal
+# case. flatten.js refuses to run outside regular hours, so a catch-up run in
+# the evening cannot fire market orders into a closed book.
+$flattenTriggers = @((New-WeekdayTrigger '3:57pm'), (New-WeekdayTrigger '3:59pm'))
+Register-NodeTask 'ORB-Flatten-B' (Join-Path $Trading 'bot b') 'flatten.js' $flattenTriggers `
+    'Backstop: cancel resting orders and flatten Bot B before the close, in case the trading loop died mid-session.'
+Register-NodeTask 'ORB-Flatten-C' (Join-Path $Trading 'bot c') 'flatten.js' $flattenTriggers `
+    'Backstop: cancel resting orders and flatten Bot C before the close, in case the trading loop died mid-session.'
+
+# --- dead-man alerts ---------------------------------------------------------
+# A task that never fires produces no log line, no exit code and no alert. Four
+# sessions (08-07, 08-13, 08-18, 08-19) passed with zero market-hours activity
+# and nothing said a word. watchdog.js looks for the ABSENCE: one check after
+# the open, one after the close (which also asks the broker whether B and C are
+# actually flat). Silent unless something is wrong.
+Register-NodeTask 'Watchdog-Open'  $Trading 'watchdog.js open'  (New-WeekdayTrigger '9:40am') `
+    'Alerts if a bot logged no cycle after the open.'
+Register-NodeTask 'Watchdog-Close' $Trading 'watchdog.js close' (New-WeekdayTrigger '4:05pm') `
+    'Alerts if a bot stopped before the close, or if B/C still hold positions after it.'
+
 # Keep-awake guardian: holds the machine awake for the whole session (8:30am->16:05) so it
 # never sleeps mid-session, then releases automatically (sleeps normally outside market hours).
 # Relying on each task's WakeToRun alone is flaky and lets the machine nap between the 5-min runs.
@@ -159,6 +204,12 @@ Write-Host "  registered: KeepAwake-MarketHours"
 Write-Host "`nEnabling wake timers (AC + battery)..."
 powercfg /setacvalueindex SCHEME_CURRENT SUB_SLEEP RTCWAKE 1 | Out-Null
 powercfg /setdcvalueindex SCHEME_CURRENT SUB_SLEEP RTCWAKE 1 | Out-Null
+# On AC this machine was set to sleep after FIVE minutes idle. keep-awake.ps1
+# holds it up from 8:30, but only if it is awake at 8:30 to run - and once it
+# releases at 16:05, a five-minute idle timer means the next morning's 8:55
+# regime call is already racing a sleeping machine. A desktop that runs a
+# trading schedule should not sleep on mains power at all.
+powercfg /change standby-timeout-ac 0
 powercfg /setactive SCHEME_CURRENT
 
 # Read it back. Setting it is not the same as it sticking: on 2026-08-04 this was
